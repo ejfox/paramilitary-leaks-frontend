@@ -1,35 +1,58 @@
-// Import necessary functions from Vue and VueUse
-import { createGlobalState, useLocalStorage } from '@vueuse/core'
+import { createGlobalState } from '@vueuse/core'
+import { ref, reactive } from 'vue'
 
-// Define the global state using createGlobalState from VueUse
+// WARNING: NEVER store visualization data in the store!
+// Large datasets should be kept as vanilla JS arrays in the visualization component
+// or processed directly from the data source to visualization format.
 export const useAppStore = createGlobalState(() => {
-  // useLocalStorage is a VueUse function that creates a ref linked to a localStorage key.
-  // It takes two arguments: the localStorage key and the default value.
-  const activeItem = useLocalStorage('activeItem', null)
-  const itemList = useLocalStorage('itemList', [])
+  // UI state only
+  const loading = ref(true)
+  const error = ref(null)
+  const tooltip = ref({ show: false, data: null, x: 0, y: 0 })
 
-  // Define actions that mutate the state. These are functions that modify the refs.
-  const setActiveItem = (item) => {
-    activeItem.value = item
-  }
+  // Global filters
+  const filters = reactive({
+    startDate: '',
+    endDate: '',
+    sender: '',
+    chat: '',
+    searchTerm: ''
+  })
 
-  const addItem = (item) => {
-    itemList.value.push(item)
-  }
-
-  const removeItem = (item) => {
-    const index = itemList.value.indexOf(item)
-    if (index !== -1) {
-      itemList.value.splice(index, 1)
-    }
-  }
-
-  // The object returned here will be the global state that can be accessed in any component.
   return {
-    activeItem,
-    itemList,
-    setActiveItem,
-    addItem,
-    removeItem,
+    // UI State only - NO visualization data!
+    loading,
+    error,
+    tooltip,
+    filters,
+
+    // Mutations
+    setLoading: (isLoading) => (loading.value = isLoading),
+    setError: (err) => (error.value = err),
+    setTooltip: (show, data = null, x = 0, y = 0) => {
+      tooltip.value = { show, data, x, y }
+    },
+
+    // Filter mutations
+    setDateRange: (start, end) => {
+      filters.startDate = start
+      filters.endDate = end
+    },
+    setSender: (sender) => {
+      filters.sender = sender
+    },
+    setChat: (chat) => {
+      filters.chat = chat
+    },
+    setSearchTerm: (term) => {
+      filters.searchTerm = term
+    },
+    resetFilters: () => {
+      filters.startDate = ''
+      filters.endDate = ''
+      filters.sender = ''
+      filters.chat = ''
+      filters.searchTerm = ''
+    }
   }
 })

@@ -9,7 +9,7 @@
     "preview": "nuxt preview",
     "postinstall": "nuxt prepare",
     "prettier": "prettier {*.*,**/*.*} --single-quote --write",
-    "lint": "eslint --ext .js,.vue --ignore-path .gitignore --fix src"
+    "lint": "eslint --ext .js,.vue,.ts --ignore-path .gitignore --fix ."
   },
   "devDependencies": {
     "@nuxt/devtools": "^1.0.0",
@@ -17,14 +17,19 @@
     "nuxt": "^3.15.1"
   },
   "dependencies": {
+    "@duckdb/duckdb-wasm": "^1.29.0",
     "@nuxtjs/google-fonts": "^3.0.2",
     "@nuxtjs/supabase": "^1.0.1",
     "@vueuse/motion": "^2.0.0-beta.25",
     "@vueuse/nuxt": "^9.13.0",
+    "apache-arrow": "^19.0.1",
     "autoprefixer": "^10.4.20",
-    "d3": "^7.8.5",
+    "d3": "^7.9.0",
+    "date-fns": "^4.1.0",
     "eslint-config-prettier": "^9.0.0",
     "postcss": "^8.4.49",
+    "regl": "^2.1.1",
+    "regl-scatterplot": "^1.14.0",
     "tailwindcss": "^3.4.14",
     "v-onboarding": "^2.5.1"
   },
