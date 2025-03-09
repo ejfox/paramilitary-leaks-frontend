@@ -16,7 +16,7 @@ export default defineNuxtConfig({
 
   // for netlify deploy
   ssr: false,
-  
+
   experimental: {
     appManifest: false
   },
@@ -50,5 +50,4 @@ export default defineNuxtConfig({
     },
   },
 
-  compatibilityDate: '2025-03-07',
 })
