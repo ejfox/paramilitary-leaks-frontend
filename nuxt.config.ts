@@ -8,10 +8,10 @@ export default defineNuxtConfig({
       meta: [
         { charset: 'utf-8' },
         { name: 'viewport', content: 'width=device-width, initial-scale=1' },
-        { name: 'description', content: pkg.version },
-      ],
+        { name: 'description', content: pkg.version }
+      ]
     },
-    buildAssetsDir: '/_nuxt/',
+    buildAssetsDir: '/_nuxt/'
   },
 
   // for netlify deploy
@@ -26,11 +26,14 @@ export default defineNuxtConfig({
   modules: [
     // '@nuxtjs/supabase',
     '@vueuse/nuxt',
-    ['@nuxtjs/google-fonts', {
-      families: {
-        'Figtree': [400, 700],
-      },
-    }],
+    [
+      '@nuxtjs/google-fonts',
+      {
+        families: {
+          Figtree: [400, 700]
+        }
+      }
+    ]
   ],
 
   runtimeConfig: {
@@ -38,7 +41,9 @@ export default defineNuxtConfig({
       OPENROUTER_API_KEY: process.env.OPENROUTER_API_KEY,
       OPENAI_API_KEY: process.env.OPENAI_API_KEY,
       PRODUCTION: process.env.PRODUCTION,
-    },
+      // R2 Configuration
+      R2_PARQUET_URL: process.env.R2_PARQUET_URL
+    }
   },
 
   css: ['~/assets/css/main.css'],
@@ -46,8 +51,9 @@ export default defineNuxtConfig({
   postcss: {
     plugins: {
       tailwindcss: {},
-      autoprefixer: {},
-    },
+      autoprefixer: {}
+    }
   },
 
+  compatibilityDate: '2025-03-09'
 })

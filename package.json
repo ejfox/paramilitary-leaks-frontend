@@ -9,7 +9,8 @@
     "preview": "nuxt preview",
     "postinstall": "nuxt prepare",
     "prettier": "prettier {*.*,**/*.*} --single-quote --write",
-    "lint": "eslint --ext .js,.vue,.ts --ignore-path .gitignore --fix ."
+    "lint": "eslint --ext .js,.vue,.ts --ignore-path .gitignore --fix .",
+    "verify-parquet": "node scripts/verify-parquet.js"
   },
   "devDependencies": {
     "@nuxt/devtools": "^1.0.0",

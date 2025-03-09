@@ -1,49 +1,79 @@
-# Paramilitary Leaks Visualization
+# Paramilitary Leaks Frontend
 
-A visualization tool for Telegram chat data from paramilitary groups. This tool allows exploring message patterns over time.
+A visualization dashboard for leaked paramilitary communications.
 
+## Setup
 
-## Data Prep
+```bash
+# Install dependencies
+yarn install
+
+# Start development server
+yarn dev
+```
+
+## Deployment with Netlify and Cloudflare R2
+
+This application is configured to work with Netlify for deployment and Cloudflare R2 for storing and serving the parquet data files.
+
+### R2 Configuration
+
+The application is configured to use the following R2 URL for the parquet file:
+```
+https://r2.ejfox.com/para-leaks/telegram_chats.r4.parquet
+```
+
+### Setting up Netlify
+
+1. Create a new site in Netlify:
+   - Connect to your GitHub repository
+   - Use the build settings from the `netlify.toml` file
+
+2. Configure environment variables in Netlify:
+   - Go to Site settings > Environment variables
+   - Add the following variable:
+     - `R2_PARQUET_URL`: `https://r2.ejfox.com/para-leaks/telegram_chats.r4.parquet`
+
+3. Deploy your site:
+   - Trigger a new deployment
+   - The application will fetch the parquet file from R2
+
+### Local Development with R2
+
+To test with R2 locally:
+
+1. Create a `.env` file in the root of your project
+2. The file should contain:
+   ```
+   R2_PARQUET_URL=https://r2.ejfox.com/para-leaks/telegram_chats.r4.parquet
+   ```
+3. Run the development server:
+   ```bash
+   yarn dev
+   ```
+
+### Troubleshooting R2 Issues
+
+If you encounter the "No magic bytes found at end of file" error:
+
+1. Check that the parquet file is accessible at the URL
+2. Check the browser console for more detailed error messages
+
+## Data Preparation
+
 Getting data from sqlite to a csv:
-`sqlite3 -header -csv telegram_chats.db 'select * from messages;' > telegram_chats.csv`
+```bash
+sqlite3 -header -csv telegram_chats.db 'select * from messages;' > telegram_chats.csv
+```
 
 Getting data from .csv to parquet: 
-`duckdb -c "COPY (SELECT * FROM read_csv('telegram_chats.csv')) TO 'telegram_chats.parquet' (FORMAT PARQUET);"`
-
-
-## Current Status / Sitrep
-
-The application loads Telegram chat data from a Parquet file (`telegram_messages.parquet`) and visualizes it in an interactive scatterplot. Each point represents a message, and the visualization shows patterns across time.
-
-### Data Pipeline
-
-We've successfully converted the SQLite database (`telegram_chats.db`) to a Parquet file format that can be loaded by the browser:
-
-1. The SQLite database contains messages from multiple Telegram chats
-2. We use DuckDB with the SQLite extension to:
-   - Extract messages from the SQLite database
-   - Join chat titles with messages
-   - Convert to a compatible format for visualization
-3. The data is saved as a Parquet file in the `/public` directory
-
-### Visualization Features
-
-- Interactive scatter plot of messages over time
-- Color coding by chat or sender
-- Tooltip displaying message details on hover
-- Time annotations on the X-axis
-- Legend showing chat groups
-
-### Technical Stack
-
-- Nuxt 3 framework
-- DuckDB for data processing
-- VueUse for state management
-- 2D visualization using WebGL
+```bash
+duckdb -c "COPY (SELECT * FROM read_csv('telegram_chats.csv')) TO 'telegram_chats.parquet' (FORMAT PARQUET);"
+```
 
 ## Data Conversion
 
-We've created a Python script to convert the SQLite database to Parquet format:
+You can create a Python script to convert the SQLite database to Parquet format:
 
 ```bash
 # Install DuckDB Python package
@@ -57,25 +87,29 @@ The script:
 1. Opens the SQLite database using DuckDB's SQLite extension
 2. Joins the messages table with the group_chats table
 3. Maps the fields to our expected format
-4. Writes the result to a Parquet file in the public directory
+4. Writes the result to a Parquet file
 
-## Setup
+## Features
 
-Make sure to install the dependencies:
+- Interactive time-based visualization of messages
+- Metadata view with statistics
+- Message feed with filtering options
+- Responsive design
+- Color coding by chat or sender
+- Tooltip displaying message details on hover
+- Time annotations on the X-axis
+- Legend showing chat groups
 
-```bash
-# yarn
-yarn install
-```
+## Technologies
 
-## Development Server
-
-Start the development server on `http://localhost:3000`:
-
-```bash
-# yarn
-yarn dev
-```
+- Vue.js 3 with Composition API
+- Nuxt 3
+- DuckDB-wasm for parquet file processing
+- D3.js for data visualization
+- Tailwind CSS for styling
+- Cloudflare R2 for data storage
+- Netlify for deployment
+- WebGL for 2D visualization
 
 ## Production
 
@@ -93,25 +127,6 @@ Locally preview production build:
 yarn preview
 ```
 
-## Current Issues
+## License
 
-- Limited number of points displayed (currently 10,000 out of ~77,000 total messages)
-- Performance with large datasets
-- Legends can get crowded with many chat groups
-- Limited filtering options
-
-## Next Steps
-
-1. **Data Loading Optimization**
-   - Implement virtual scrolling or progressive loading for large datasets
-   - Optimize DuckDB queries
-
-2. **UI Improvements**
-   - Add more filtering options (by date range, chat group, etc.)
-   - Improve legends with better categorization
-   - Add search functionality
-
-3. **Analysis Features**
-   - Add timeline analysis
-   - Support keyword highlighting
-   - Add statistical summaries
+MIT

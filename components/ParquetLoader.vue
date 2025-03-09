@@ -29,6 +29,7 @@ import mvp_worker from '@duckdb/duckdb-wasm/dist/duckdb-browser-mvp.worker.js?ur
 import duckdb_wasm_eh from '@duckdb/duckdb-wasm/dist/duckdb-eh.wasm?url'
 import eh_worker from '@duckdb/duckdb-wasm/dist/duckdb-browser-eh.worker.js?url'
 import { useTimestampParser } from '~/composables/useTimestampParser'
+import { useR2Storage } from '~/composables/useR2Storage'
 
 const props = defineProps({
   filterPreModern: {
@@ -38,6 +39,10 @@ const props = defineProps({
   maxPoints: {
     type: Number,
     default: 100000
+  },
+  parquetFilePath: {
+    type: String,
+    default: null
   }
 })
 
@@ -149,6 +154,12 @@ watch(() => props.filterPreModern, () => {
 onMounted(async () => {
   try {
     console.log('🔍 Starting initialization...')
+    const config = useRuntimeConfig()
+    const { fetchFile } = useR2Storage()
+
+    // Get the file path from props or config
+    const filePath = props.parquetFilePath || config.public.PARQUET_FILE_PATH || 'messages.parquet'
+    console.log(`🔍 Using parquet file: ${filePath}`)
 
     // Define manual bundles with Vite URL imports
     const MANUAL_BUNDLES = {
@@ -180,7 +191,7 @@ onMounted(async () => {
     const conn = await db.connect()
 
     console.log('🔍 Fetching Parquet file...')
-    const response = await fetch('/messages.parquet')
+    const response = await fetchFile(filePath)
     if (!response.ok) {
       throw new Error(`Failed to fetch Parquet file: ${response.status} ${response.statusText}`)
     }
@@ -191,14 +202,14 @@ onMounted(async () => {
 
     console.log('🔍 Registering Parquet file buffer...')
     await db.registerFileBuffer(
-      'messages.parquet',
+      'data.parquet',
       new Uint8Array(arrayBuffer)
     )
 
     console.log('🔍 Creating table from Parquet file...')
     await conn.query(`
         CREATE TABLE messages AS 
-        SELECT * FROM 'messages.parquet'
+        SELECT * FROM 'data.parquet'
       `)
 
     console.log('🔍 Counting rows...')

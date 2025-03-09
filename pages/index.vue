@@ -573,12 +573,15 @@ function handleResize() {
 
 onMounted(async () => {
   try {
-    console.log('Loading telegram_chats.v3.parquet...')
-    const result = await loadParquetFile('/telegram_chats.v3.parquet')
+    console.log('Loading parquet data from R2...')
+
+    const result = await loadParquetFile()
+
     if (!result.success) {
-      throw new Error(result.error || 'Failed to load data')
+      throw new Error(result.error || 'Failed to load data from R2')
     }
 
+    console.log(`Successfully loaded ${result.data.length} rows from R2`)
     rawData.value = result.data
     filteredData.value = result.data
 
