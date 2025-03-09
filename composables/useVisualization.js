@@ -2,14 +2,15 @@ import { ref, onMounted, onUnmounted } from 'vue'
 import createScatterplot from 'regl-scatterplot'
 import * as d3 from 'd3'
 import { useTimestampParser } from './useTimestampParser'
+import { useColorMap } from './useColorMap'
 
 export function useVisualization() {
   const { parseTimestamp } = useTimestampParser()
+  const colorMap = useColorMap()
   const canvas = ref(null)
   let scatterplot = null
   let resizeObserver = null
   let userColorMap = new Map()
-  let colorMap = {}
   let allData = null
   let highlightedIndices = null
   const selectedPoint = ref(null)
@@ -54,12 +55,8 @@ export function useVisualization() {
         lassoColor: [0.5, 0.5, 1, 0.8], // Blue lasso selection color
         lassoMinDelay: 10, // Make lasso selection more responsive
         lassoMinDist: 0.001, // Make lasso selection more sensitive
-        enableLasso: true, // Enable lasso selection
-        // Set initial camera position
-        camera: {
-          distance: 1.5, // Slightly zoomed out
-          target: [0, 0] // Centered
-        }
+        enableLasso: true // Enable lasso selection
+        // Let the scatterplot handle the camera automatically
       })
 
       // Handle single point selection
@@ -75,7 +72,13 @@ export function useVisualization() {
 
           // Add to selected points if not already selected
           if (allData && !selectedPoints.value.includes(allData[pointIndex])) {
+            console.log('Adding point to selectedPoints:', pointIndex)
             selectedPoints.value.push(allData[pointIndex])
+            console.log(
+              'selectedPoints now has',
+              selectedPoints.value.length,
+              'points'
+            )
           }
 
           pulseSelectedPoint()
@@ -90,11 +93,31 @@ export function useVisualization() {
           isMultiSelectMode.value = true
 
           // Get the data points for the selected indices
-          const newSelectedPoints = points.map((index) => allData[index])
+          console.log('Lasso selected', points.length, 'points')
+
+          // Make sure we have valid indices
+          const validIndices = points.filter(
+            (index) => index >= 0 && index < allData.length
+          )
+          console.log('Valid indices:', validIndices.length)
+
+          // Get the actual data points
+          const newSelectedPoints = validIndices.map((index) => allData[index])
+          console.log('New selected points:', newSelectedPoints.length)
+
+          // Update the selectedPoints array
           selectedPoints.value = newSelectedPoints
+          console.log(
+            'selectedPoints now has',
+            selectedPoints.value.length,
+            'points'
+          )
 
           // Set the most recently selected point as the current selected point
-          selectedPoint.value = newSelectedPoints[newSelectedPoints.length - 1]
+          if (newSelectedPoints.length > 0) {
+            selectedPoint.value =
+              newSelectedPoints[newSelectedPoints.length - 1]
+          }
         }
       })
 
@@ -169,28 +192,25 @@ export function useVisualization() {
       } remaining`
     )
 
-    // Create a map of unique users/senders
-    const uniqueUsers = new Set()
-    validData.forEach((msg) => {
-      // Handle different sender field names
-      const sender = hasNewFormat
-        ? msg.from || 'unknown'
+    // Make sure the color map is initialized
+    const getSender = (msg) => {
+      return hasNewFormat
+        ? msg.from || msg.sender || 'unknown'
         : msg.sender_name || msg.sender || 'unknown'
-      uniqueUsers.add(sender)
+    }
+
+    // Initialize color map if it doesn't have any senders yet
+    if (colorMap.getAllSenders().length === 0) {
+      colorMap.initialize(validData, getSender)
+    }
+
+    // Get all unique senders from the color map
+    const uniqueSenders = colorMap.getAllSenders()
+
+    // Create a mapping for category indices
+    uniqueSenders.forEach((sender, i) => {
+      userColorMap.set(sender, i) // Store index for category coloring
     })
-
-    // Create a color mapping for each user
-    const users = Array.from(uniqueUsers)
-
-    users.forEach((user, i) => {
-      const colorValue = i / Math.max(users.length - 1, 1)
-      const color = d3.rgb(d3.interpolateTurbo(colorValue))
-      // Store normalized RGB values (0-1)
-      colorMap[user] = [color.r / 255, color.g / 255, color.b / 255, 1]
-      userColorMap.set(user, i) // Store index for category coloring
-    })
-
-    console.log(`Found ${users.length} unique users for coloring`)
 
     try {
       // Handle different timestamp field names
@@ -227,107 +247,26 @@ export function useVisualization() {
       console.log(`Generated ${x.length} points for visualization`)
 
       if (scatterplot && x.length > 0) {
+        // Prepare colors from the color map
+        const colors = uniqueSenders.map((sender) => {
+          const colorValue = colorMap.getSenderColorValue(sender)
+          const color = d3.rgb(d3.interpolateTurbo(colorValue))
+          return [color.r / 255, color.g / 255, color.b / 255, 1]
+        })
+
         // Set color configuration
         scatterplot.set({
           colorBy: 'category',
-          pointColor: Object.values(colorMap)
+          pointColor: colors
         })
 
         // Draw with categories for coloring
         scatterplot.draw({ x, y, category: categories })
 
-        // Ensure all points are visible by resetting the view
-        setTimeout(() => {
-          // Use a slightly zoomed out view to ensure all points are visible
-          const camera = scatterplot.get('camera')
-          camera.distance = 1.5 // Zoom out a bit
-          camera.target = [0, 0] // Center the view
-
-          scatterplot.set({ camera })
-          console.log('Visualization centered after data load')
-        }, 100)
+        // No need to adjust the camera - let the scatterplot handle it
       }
     } catch (err) {
       console.error('Error transforming data:', err)
-    }
-  }
-
-  // Update data without resetting camera position
-  function updateDataWithoutReset(rawData) {
-    if (!rawData?.length || !scatterplot) return
-
-    allData = rawData // Store for filtering later
-    selectedPoints.value = [] // Reset selected points when data changes
-
-    // Check for expected fields in the new format
-    const hasNewFormat =
-      rawData[0].hasOwnProperty('date') ||
-      rawData[0].hasOwnProperty('message') ||
-      rawData[0].hasOwnProperty('from')
-
-    // Filter out invalid timestamps
-    const validData = rawData.filter((msg) => {
-      // Handle different timestamp field names
-      const timestampField = hasNewFormat ? 'date' : 'timestamp'
-      const timestamp = parseTimestamp(msg[timestampField])
-      return !isNaN(timestamp)
-    })
-
-    if (!validData.length) {
-      console.warn('No valid dates found after filtering')
-      return
-    }
-
-    try {
-      // Save current camera state
-      const currentCamera = scatterplot.get('camera')
-
-      // Handle different timestamp field names
-      const timestampField = hasNewFormat ? 'date' : 'timestamp'
-
-      const timestamps = validData.map(
-        (m) => new Date(parseTimestamp(m[timestampField]))
-      )
-      const extent = d3.extent(timestamps)
-
-      const xScale = d3.scaleTime().domain(extent).range([-1, 1])
-
-      // Prepare data in columnar format
-      const x = []
-      const y = []
-      const categories = [] // For categorical coloring
-
-      validData.forEach((msg) => {
-        // Handle different timestamp field names
-        const timestampField = hasNewFormat ? 'date' : 'timestamp'
-        const date = new Date(parseTimestamp(msg[timestampField]))
-        const hours = date.getHours() + date.getMinutes() / 60
-
-        // Handle different sender field names
-        const sender = hasNewFormat
-          ? msg.from || 'unknown'
-          : msg.sender_name || msg.sender || 'unknown'
-
-        x.push(xScale(date))
-        y.push((hours / 24) * 2 - 1)
-        categories.push(userColorMap.get(sender))
-      })
-
-      if (scatterplot && x.length > 0) {
-        // Set color configuration
-        scatterplot.set({
-          colorBy: 'category',
-          pointColor: Object.values(colorMap)
-        })
-
-        // Draw with categories for coloring
-        scatterplot.draw({ x, y, category: categories })
-
-        // Restore the previous camera state
-        scatterplot.set({ camera: currentCamera })
-      }
-    } catch (err) {
-      console.error('Error updating data without reset:', err)
     }
   }
 
@@ -400,11 +339,55 @@ export function useVisualization() {
     }
   }
 
+  // Filter points without moving the camera
+  function filterPointsWithoutMoving(indices) {
+    if (!scatterplot || !allData || !indices.length) return
+
+    console.log(
+      'filterPointsWithoutMoving called with',
+      indices.length,
+      'indices'
+    )
+
+    highlightedIndices = indices
+
+    // Update selected points based on highlighted indices
+    const pointsToSelect = indices.map((index) => allData[index])
+    console.log('Setting selectedPoints to', pointsToSelect.length, 'points')
+    selectedPoints.value = pointsToSelect
+
+    try {
+      // Use filter to show only the selected points
+      scatterplot.filter(indices)
+
+      // Get all unique senders from the color map
+      const uniqueSenders = colorMap.getAllSenders()
+
+      // Prepare colors from the color map
+      const colors = uniqueSenders.map((sender) => {
+        const colorValue = colorMap.getSenderColorValue(sender)
+        const color = d3.rgb(d3.interpolateTurbo(colorValue))
+        return [color.r / 255, color.g / 255, color.b / 255, 1]
+      })
+
+      // Keep the original categorical coloring
+      scatterplot.set({
+        opacitySelected: 1.0,
+        colorBy: 'category',
+        pointColor: colors
+      })
+    } catch (err) {
+      console.error('Error filtering points:', err)
+    }
+  }
+
   // Reset the view and selection
   function resetView() {
     if (!scatterplot) return
 
     try {
+      console.log('Resetting view and restoring colors')
+
       highlightedIndices = null
       selectedPoint.value = null
       selectedPoints.value = []
@@ -413,13 +396,23 @@ export function useVisualization() {
       scatterplot.unfilter()
       scatterplot.deselect()
 
+      // Get all unique senders from the color map
+      const uniqueSenders = colorMap.getAllSenders()
+
+      // Prepare colors from the color map
+      const colors = uniqueSenders.map((sender) => {
+        const colorValue = colorMap.getSenderColorValue(sender)
+        const color = d3.rgb(d3.interpolateTurbo(colorValue))
+        return [color.r / 255, color.g / 255, color.b / 255, 1]
+      })
+
       // Reset opacity settings and restore categorical coloring
       scatterplot.set({
         opacity: 0.9,
         opacitySelected: 1.0,
         opacityInactiveScale: 0.3,
         colorBy: 'category',
-        pointColor: Object.values(colorMap) // Restore the original color map
+        pointColor: colors
       })
 
       scatterplot.reset()
@@ -430,8 +423,14 @@ export function useVisualization() {
 
   // Clear the selected point
   function clearSelectedPoint() {
+    console.log('clearSelectedPoint called')
     selectedPoint.value = null
     selectedPoints.value = []
+    console.log(
+      'selectedPoints cleared, now has',
+      selectedPoints.value.length,
+      'points'
+    )
     if (scatterplot) {
       scatterplot.deselect()
     }
@@ -493,14 +492,6 @@ export function useVisualization() {
       height: rect.height
     })
 
-    // Reset the camera to ensure all points are visible
-    // Use a slightly zoomed out view to ensure all points are visible
-    const camera = scatterplot.get('camera')
-    camera.distance = 1.5 // Zoom out a bit
-    camera.target = [0, 0] // Center the view
-
-    scatterplot.set({ camera })
-
     console.log(`Canvas resized to ${rect.width}x${rect.height}`)
   }
 
@@ -533,12 +524,12 @@ export function useVisualization() {
     transformData,
     initScatterplot,
     highlightPoints,
+    filterPointsWithoutMoving,
     resetView,
     selectedPoint,
     selectedPoints,
     clearSelectedPoint,
     isMultiSelectMode,
-    resizeAndCenterVisualization,
-    updateDataWithoutReset
+    resizeAndCenterVisualization
   }
 }

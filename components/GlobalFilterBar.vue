@@ -147,7 +147,7 @@ const debouncedSearch = useDebounceFn(() => {
   appStore.setSearchTerm(searchInput.value)
   isSearching.value = false
   emit('filters-changed')
-}, 300)
+}, 150)
 
 // Watch search input and apply debounced search
 watch(searchInput, (newValue) => {

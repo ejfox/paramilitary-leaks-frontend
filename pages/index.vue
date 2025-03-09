@@ -4,19 +4,27 @@
     <GlobalFilterBar :top-senders="stats.topSenders" :top-chats="stats.topChats" @filters-changed="applyGlobalFilters"
       class="flex-shrink-0" />
 
+    <!-- Navigation Bar -->
+    <div class="bg-gray-800 border-b border-gray-700 px-4 py-2 flex items-center justify-between">
+      <h1 class="text-white text-lg font-bold">Paramilitary Leaks</h1>
+      <div class="flex space-x-4">
+        <span class="text-blue-400 font-medium text-sm">Visualization Dashboard</span>
+        <NuxtLink to="/feed" class="text-gray-300 hover:text-white transition-colors text-sm flex items-center">
+          <span>Message Feed</span>
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 ml-1" viewBox="0 0 20 20" fill="currentColor">
+            <path fill-rule="evenodd"
+              d="M10.293 5.293a1 1 0 011.414 0l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414-1.414L12.586 11H5a1 1 0 110-2h7.586l-2.293-2.293a1 1 0 010-1.414z"
+              clip-rule="evenodd" />
+          </svg>
+        </NuxtLink>
+      </div>
+    </div>
+
     <div class="flex flex-1 overflow-hidden">
       <!-- Metadata Sidebar (1/3 width) -->
       <div class="w-1/3 p-4 border-r border-gray-700 flex flex-col overflow-y-auto h-full custom-scrollbar">
         <div class="flex items-center justify-between mb-4">
           <h1 class="text-white text-xl font-bold">Paramilitary Leaks</h1>
-          <NuxtLink to="/feed" class="text-blue-400 hover:text-blue-300 text-sm flex items-center">
-            <span>Message Feed</span>
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 ml-1" viewBox="0 0 20 20" fill="currentColor">
-              <path fill-rule="evenodd"
-                d="M10.293 5.293a1 1 0 011.414 0l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414-1.414L12.586 11H5a1 1 0 110-2h7.586l-2.293-2.293a1 1 0 010-1.414z"
-                clip-rule="evenodd" />
-            </svg>
-          </NuxtLink>
         </div>
 
         <!-- View Tabs -->
@@ -94,9 +102,8 @@
           <!-- Top Senders -->
           <div class="feltron-card p-3 rounded-lg">
             <div class="feltron-title mb-2">Top Senders</div>
-            <div class="space-y-1">
-              <div v-for="sender in stats.topSenders.slice(0, 5)" :key="sender.name"
-                @click="highlightSender(sender.name)"
+            <div class="space-y-1 max-h-60 overflow-y-auto custom-scrollbar pr-1">
+              <div v-for="sender in stats.topSenders" :key="sender.name" @click="highlightSender(sender.name)"
                 class="flex justify-between items-center p-1 rounded cursor-pointer transition-colors" :class="[
                   highlightedSender === sender.name ? 'bg-red-900' : 'hover:bg-gray-700'
                 ]">
@@ -126,47 +133,23 @@
 
       <!-- Main Visualization (2/3 width) -->
       <div class="w-2/3 flex flex-col overflow-hidden">
-        <!-- Loading State -->
         <div v-if="loading" class="flex-1 flex items-center justify-center">
-          <div class="flex flex-col items-center">
-            <div class="animate-spin mb-3">
-              <svg class="w-8 h-8 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+          <div class="flex items-center">
+            <div class="animate-spin mr-3">
+              <svg class="w-6 h-6 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                 <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
                 <path class="opacity-75" fill="currentColor"
                   d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z">
                 </path>
               </svg>
             </div>
-            <div class="text-white text-lg">Loading data from R2 storage...</div>
-            <div class="text-gray-400 text-sm mt-2">This may take a moment</div>
+            <div class="text-white">Loading data...</div>
           </div>
         </div>
-
-        <!-- Error State -->
-        <div v-else-if="error" class="flex-1 flex items-center justify-center">
-          <div class="flex flex-col items-center max-w-lg text-center">
-            <div class="text-red-500 mb-3">
-              <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12" fill="none" viewBox="0 0 24 24"
-                stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                  d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-              </svg>
-            </div>
-            <div class="text-red-500 text-xl font-bold mb-2">Error Loading Data</div>
-            <div class="text-white mb-4">{{ error }}</div>
-            <button @click="retryLoading"
-              class="bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded transition-colors">
-              Retry Loading
-            </button>
-          </div>
-        </div>
-
-        <!-- Time View -->
+        <div v-if="error" class="text-red-500 p-4">{{ error }}</div>
         <div v-else-if="activeView === 'time'" class="flex-1 relative">
           <canvas ref="canvas" class="absolute inset-0 w-full h-full"></canvas>
         </div>
-
-        <!-- Metadata View -->
         <div v-else-if="activeView === 'metadata'" class="flex-1 overflow-y-auto p-4">
           <div class="grid grid-cols-2 gap-4">
             <!-- Total Messages -->
@@ -184,8 +167,8 @@
             <!-- Top Senders Visualization -->
             <div class="feltron-card p-4 col-span-2">
               <div class="feltron-title">Top Senders</div>
-              <div class="space-y-2 mt-3">
-                <div v-for="(sender, index) in stats.topSenders.slice(0, 5)" :key="sender.name"
+              <div class="space-y-2 mt-3 max-h-80 overflow-y-auto custom-scrollbar pr-1">
+                <div v-for="(sender, index) in stats.topSenders" :key="sender.name"
                   class="relative h-8 bg-gray-900 rounded overflow-hidden">
                   <div class="absolute top-0 left-0 h-full bg-blue-900"
                     :style="{ width: (sender.count / stats.topSenders[0].count * 100) + '%' }"></div>
@@ -212,6 +195,7 @@ import { ref, reactive, onMounted, computed, watch, nextTick, onUnmounted } from
 import { useVisualization } from '~/composables/useVisualization'
 import { useParquetLoader } from '~/composables/useParquetLoader'
 import { useAppStore } from '~/composables/appStore'
+import { useColorMap } from '~/composables/useColorMap'
 import * as d3 from 'd3'
 import { format } from 'date-fns'
 
@@ -223,6 +207,7 @@ const highlightedSender = ref(null)
 const activeView = ref('time')
 
 const appStore = useAppStore()
+const colorMap = useColorMap()
 
 const { loadParquetFile } = useParquetLoader()
 const {
@@ -230,12 +215,12 @@ const {
   initScatterplot,
   transformData,
   highlightPoints,
+  filterPointsWithoutMoving,
   resetView,
   selectedPoint,
   selectedPoints,
   clearSelectedPoint,
-  resizeAndCenterVisualization,
-  updateDataWithoutReset
+  resizeAndCenterVisualization
 } = useVisualization()
 
 // Stats for the sidebar
@@ -245,6 +230,21 @@ const stats = reactive({
   topSenders: [],
   topChats: []
 })
+
+// Cache for sender names to avoid repeated format checks
+const senderCache = new Map();
+
+// Cache for chat names to avoid repeated format checks
+const chatNameCache = new Map();
+
+// Cache for timestamps to avoid repeated format checks
+const timestampCache = new Map();
+
+// Cache for message content to avoid repeated format checks
+const contentCache = new Map();
+
+// Cache for unique senders to avoid recalculating
+let uniqueSendersCache = null;
 
 // Format the timestamp for the selected point
 function formatSelectedPointDate(timestamp) {
@@ -259,44 +259,59 @@ function formatSelectedPointDate(timestamp) {
 
 // Get color for a sender (for the UI dots)
 function getSenderColor(senderName) {
-  const index = stats.topSenders.findIndex(s => s.name === senderName)
-  if (index === -1) return '#ffffff'
-
-  const normalizedIndex = index / Math.max(stats.topSenders.length - 1, 1)
-  return d3.interpolateTurbo(normalizedIndex)
+  return colorMap.getSenderColor(senderName)
 }
 
 // Highlight a specific sender's messages
 function highlightSender(senderName) {
+  console.log('highlightSender called with', senderName);
+
   if (highlightedSender.value === senderName) {
     // Toggle off if already selected
+    console.log('Toggling off highlight for', senderName);
     resetHighlight()
     return
   }
 
   highlightedSender.value = senderName
 
+  console.time('highlight sender');
+
   // Find all points from this sender in the filtered data
-  const senderPoints = filteredData.value
-    .map((msg, index) => ({
-      index,
-      sender: getPointSender(msg)
-    }))
-    .filter(item => item.sender === senderName)
-    .map(item => item.index)
+  const senderPoints = filteredData.value.filter(msg => getPointSender(msg) === senderName);
+  console.log('Found', senderPoints.length, 'points for sender', senderName);
+
+  // Create a map for faster lookups
+  const filteredDataMap = new Map();
+  filteredData.value.forEach((item, index) => {
+    const key = getPointTimestamp(item) + '|' + getPointSender(item);
+    filteredDataMap.set(key, index);
+  });
+
+  // Get the indices for visualization using the map
+  const senderIndices = senderPoints.map(msg => {
+    const key = getPointTimestamp(msg) + '|' + getPointSender(msg);
+    return filteredDataMap.get(key);
+  }).filter(index => index !== undefined);
+
+  console.log('Valid indices for visualization:', senderIndices.length);
+  console.timeEnd('highlight sender');
 
   // Call the visualization to highlight these points
-  highlightPoints(senderPoints)
+  filterPointsWithoutMoving(senderIndices)
 }
 
 // Reset all highlights
 function resetHighlight() {
   highlightedSender.value = null
+  selectedPoints.value = [] // Clear selected points
   resetView()
 }
 
 // Calculate stats from the data
 function calculateStats(data) {
+  console.log('calculateStats called with', data.length, 'points');
+
   if (!data || !data.length) return
 
   // Total messages
@@ -323,22 +338,28 @@ function calculateStats(data) {
     }
   })
 
-  // Top senders
+  // Log the sender counts for debugging
+  console.log('Sender counts:', senderCounts);
+
+  // Top senders - don't limit to 10 when we have selected points
   stats.topSenders = Object.entries(senderCounts)
     .map(([name, count]) => ({ name, count }))
     .sort((a, b) => b.count - a.count)
-    .slice(0, 10)
 
-  // Top chats
+  // Log the top senders for debugging
+  console.log('Top senders:', stats.topSenders);
+
+  // Top chats - don't limit to 6 when we have selected points
   stats.topChats = Object.entries(chatCounts)
     .map(([name, count]) => ({ name, count }))
     .sort((a, b) => b.count - a.count)
-    .slice(0, 6)
 }
 
 // Apply global filters from the store
 function applyGlobalFilters() {
   if (!rawData.value.length) return
+
+  console.time('filtering');
 
   let filtered = [...rawData.value]
   const filters = appStore.filters
@@ -370,25 +391,59 @@ function applyGlobalFilters() {
     filtered = filtered.filter(msg => getPointChatName(msg) === filters.chat)
   }
 
-  // Apply search term filter
+  // Apply search term filter - optimize this for performance
   if (filters.searchTerm) {
     const term = filters.searchTerm.toLowerCase()
+
     filtered = filtered.filter(msg => {
-      const content = getPointContent(msg)
-      return content && content.toLowerCase().includes(term)
+      const content = getPointContent(msg);
+      return content && content.toLowerCase().includes(term);
     })
   }
 
   filteredData.value = filtered
   calculateStats(filtered)
 
-  // Update visualization without resetting camera position
+  // Update visualization without re-arranging points
   if (activeView.value === 'time') {
-    updateDataWithoutReset(filtered)
+    // Don't call transformData as it re-arranges points
+    // Instead, use highlightPoints to show only the filtered points
+
+    // First reset any previous highlights
+    resetHighlight()
+
+    // If we have filters active, highlight only the filtered points
+    if (filtered.length < rawData.value.length) {
+      console.time('finding indices');
+
+      // Create a map for faster lookups
+      const rawDataMap = new Map();
+      rawData.value.forEach((item, index) => {
+        const key = getPointTimestamp(item) + '|' + getPointSender(item);
+        rawDataMap.set(key, index);
+      });
+
+      // Find indices of filtered points in the original data
+      const filteredIndices = filtered.map(item => {
+        const key = getPointTimestamp(item) + '|' + getPointSender(item);
+        return rawDataMap.get(key);
+      }).filter(index => index !== undefined);
+
+      console.timeEnd('finding indices');
+
+      if (filteredIndices.length > 0) {
+        filterPointsWithoutMoving(filteredIndices);
+      }
+    }
   }
 
-  // Reset any highlights
-  resetHighlight()
+  console.timeEnd('filtering');
+}
+
+// Helper to check if any filters are active
+function hasActiveFilters() {
+  const filters = appStore.filters;
+  return filters.startDate || filters.endDate || filters.sender || filters.chat || filters.searchTerm;
 }
 
 // Helper functions to handle different data formats
@@ -402,39 +457,103 @@ function isNewFormat(point) {
 
 function getPointSender(point) {
   if (!point) return 'Unknown';
-  return isNewFormat(point)
+
+  // Check cache first
+  if (senderCache.has(point)) {
+    return senderCache.get(point);
+  }
+
+  // Calculate sender name
+  const sender = isNewFormat(point)
     ? (point.from || point.sender || 'Unknown')
     : (point.sender_name || point.sender || 'Unknown');
+
+  // Cache the result
+  senderCache.set(point, sender);
+
+  return sender;
 }
 
 function getPointTimestamp(point) {
   if (!point) return null;
-  return isNewFormat(point) ? (point.date || point.timestamp) : point.timestamp;
+
+  // Check cache first
+  if (timestampCache.has(point)) {
+    return timestampCache.get(point);
+  }
+
+  // Calculate timestamp
+  const timestamp = isNewFormat(point) ? (point.date || point.timestamp) : point.timestamp;
+
+  // Cache the result
+  timestampCache.set(point, timestamp);
+
+  return timestamp;
 }
 
 function getPointContent(point) {
   if (!point) return null;
-  // Check for different possible field names for the message content
-  if (isNewFormat(point)) {
-    return point.message || point.text || null;
-  } else {
-    return point.content || point.text || null;
+
+  // Check cache first
+  if (contentCache.has(point)) {
+    return contentCache.get(point);
   }
+
+  // Calculate content
+  let content = null;
+  if (isNewFormat(point)) {
+    content = point.message || point.text || null;
+  } else {
+    content = point.content || point.text || null;
+  }
+
+  // Cache the result
+  contentCache.set(point, content);
+
+  return content;
 }
 
 function getPointChatName(point) {
   if (!point) return null;
-  return isNewFormat(point) ? (point.chat_title || point.group_chat_id || null) : (point.chat_name || point.group_chat_id || null);
+
+  // Check cache first
+  if (chatNameCache.has(point)) {
+    return chatNameCache.get(point);
+  }
+
+  // Calculate chat name
+  const chatName = isNewFormat(point)
+    ? (point.chat_title || point.group_chat_id || null)
+    : (point.chat_name || point.group_chat_id || null);
+
+  // Cache the result
+  chatNameCache.set(point, chatName);
+
+  return chatName;
 }
 
 // Update stats when selected points change
 watch(selectedPoints, (newSelectedPoints) => {
-  if (newSelectedPoints.length > 0) {
+  console.log('selectedPoints changed:', newSelectedPoints.length);
+
+  if (newSelectedPoints && newSelectedPoints.length > 0) {
     // Calculate stats based on selected points
-    calculateStats(newSelectedPoints)
+    console.log('Calculating stats for', newSelectedPoints.length, 'selected points');
+
+    // Make sure we have valid points
+    const validPoints = newSelectedPoints.filter(point => point && (getPointSender(point) || getPointTimestamp(point)));
+    console.log('Valid points for stats:', validPoints.length);
+
+    if (validPoints.length > 0) {
+      calculateStats(validPoints);
+    } else {
+      console.log('No valid points for stats, using filtered data');
+      calculateStats(filteredData.value);
+    }
   } else {
     // If no points are selected, use all filtered data
-    calculateStats(filteredData.value)
+    console.log('No points selected, calculating stats for all filtered data');
+    calculateStats(filteredData.value);
   }
 }, { deep: true })
 
@@ -443,92 +562,29 @@ function handleResize() {
   if (activeView.value === 'time') {
     nextTick(() => {
       // Just resize the canvas without changing the camera position
-      if (canvas.value && canvas.value.__regl) {
-        const container = canvas.value.parentElement;
-        const rect = container.getBoundingClientRect();
-
-        // Update canvas dimensions
-        canvas.value.width = rect.width;
-        canvas.value.height = rect.height;
-
-        // Update scatterplot dimensions without changing camera
-        if (canvas.value.__regl.scatter) {
-          canvas.value.__regl.scatter.set({
-            width: rect.width,
-            height: rect.height
-          });
-
-          // Update data without resetting camera
-          if (filteredData.value.length > 0) {
-            updateDataWithoutReset(filteredData.value);
-          }
-        }
-      }
+      if (!canvas.value) return;
+      const container = canvas.value.parentElement
+      const rect = container.getBoundingClientRect()
+      canvas.value.width = rect.width
+      canvas.value.height = rect.height
     });
-  }
-}
-
-// Function to retry loading data if it fails
-async function retryLoading() {
-  error.value = null;
-  loading.value = true;
-
-  try {
-    const r2Url = 'https://r2.ejfox.com/para-leaks/telegram_chats.r3.parquet'
-    console.log(`Retrying loading parquet from R2: ${r2Url}`)
-
-    const result = await loadParquetFile(r2Url)
-    if (!result.success) {
-      throw new Error(result.error || 'Failed to load data')
-    }
-
-    rawData.value = result.data
-    filteredData.value = result.data
-    calculateStats(result.data)
-
-    // Set default date range based on the data
-    if (result.data.length > 0) {
-      const timestamps = result.data.map(m => new Date(getPointTimestamp(m)))
-      const [minDate, maxDate] = d3.extent(timestamps)
-
-      // Format dates as YYYY-MM-DD for the date inputs
-      const formatDateForInput = d3.timeFormat('%Y-%m-%d')
-      appStore.setDateRange(formatDateForInput(minDate), formatDateForInput(maxDate))
-    }
-
-    initScatterplot()
-
-    // Wait for the next tick to ensure the canvas is rendered
-    nextTick(() => {
-      transformData(result.data)
-
-      // Ensure all points are visible
-      setTimeout(() => {
-        resizeAndCenterVisualization();
-      }, 100);
-    });
-
-    loading.value = false
-  } catch (err) {
-    console.error('Retry error:', err)
-    error.value = err.message
-    loading.value = false
   }
 }
 
 onMounted(async () => {
   try {
-    const r2Url = 'https://r2.ejfox.com/para-leaks/telegram_chats.r3.parquet'
-    console.log(`Loading parquet from R2: ${r2Url}`)
-
-    loading.value = true
-    const result = await loadParquetFile(r2Url)
+    console.log('Loading telegram_chats.v3.parquet...')
+    const result = await loadParquetFile('/telegram_chats.v3.parquet')
     if (!result.success) {
       throw new Error(result.error || 'Failed to load data')
     }
 
     rawData.value = result.data
     filteredData.value = result.data
+
+    // Initialize the color map with all data
+    colorMap.initialize(result.data, getPointSender)
+
     calculateStats(result.data)
 
     // Set default date range based on the data
@@ -546,11 +602,6 @@ onMounted(async () => {
     // Wait for the next tick to ensure the canvas is rendered
     nextTick(() => {
       transformData(result.data)
-
-      // Ensure all points are visible
-      setTimeout(() => {
-        resizeAndCenterVisualization();
-      }, 100);
     });
 
     loading.value = false
@@ -575,18 +626,11 @@ watch(activeView, (newView) => {
     nextTick(() => {
       if (!canvas.value) return;
 
-      // If scatterplot needs to be initialized, do that first
+      // Initialize scatterplot if needed
       if (!canvas.value.__regl) {
         initScatterplot();
-
         if (filteredData.value.length > 0) {
-          // Use transformData for initial view to properly center
           transformData(filteredData.value);
-        }
-      } else {
-        // For subsequent view changes, use updateDataWithoutReset
-        if (filteredData.value.length > 0) {
-          updateDataWithoutReset(filteredData.value);
         }
       }
     })
