@@ -1,0 +1,11 @@
+{
+  "template": "keepachangelog",
+  "unreleased": true,
+  "commitLimit": false,
+  "breakingPattern": "BREAKING CHANGE:",
+  "ignoreCommitPattern": "^(chore|ci|build|docs):",
+  "issueUrl": "https://github.com/ejfox/paramilitary-leaks-frontend/issues/{id}",
+  "commitUrl": "https://github.com/ejfox/paramilitary-leaks-frontend/commit/{id}",
+  "compareUrl": "https://github.com/ejfox/paramilitary-leaks-frontend/compare/{from}...{to}",
+  "sortCommits": "date-desc"
+}

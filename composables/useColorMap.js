@@ -49,11 +49,18 @@ export function useColorMap() {
     return [...uniqueSenders]
   }
 
+  // Get the index of a sender in the uniqueSenders array
+  function getSenderIndex(senderName) {
+    const index = uniqueSenders.indexOf(senderName)
+    return index >= 0 ? index : 0 // Return 0 as default if not found
+  }
+
   instance = {
     initialize,
     getSenderColor,
     getSenderColorValue,
-    getAllSenders
+    getAllSenders,
+    getSenderIndex
   }
 
   return instance

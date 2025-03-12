@@ -46,36 +46,11 @@ export function useParquetLoader() {
         throw new Error('Received empty file buffer')
       }
 
-      // Check for magic bytes at the end of the file (PAR1)
-      const lastFourBytes = new Uint8Array(
-        buffer.slice(buffer.byteLength - 4, buffer.byteLength)
-      )
-      const magicBytesString = String.fromCharCode(...lastFourBytes)
-      console.log(
-        `Last 4 bytes of file: ${magicBytesString} (${Array.from(
-          lastFourBytes
-        ).join(', ')})`
-      )
-
-      if (magicBytesString !== 'PAR1') {
-        console.warn(
-          'Warning: Parquet file may be corrupted - no PAR1 magic bytes found at end of file'
-        )
-      }
-
       console.log('Registering parquet file buffer...')
       try {
         await db.registerFileBuffer('data.parquet', new Uint8Array(buffer))
       } catch (err) {
         console.error('Error registering file buffer:', err)
-
-        // Check for the specific "No magic bytes" error
-        if (err.message && err.message.includes('magic bytes')) {
-          throw new Error(
-            `The parquet file appears to be corrupted or incomplete. Please check that the file was uploaded correctly to R2. Error: ${err.message}`
-          )
-        }
-
         throw new Error(`Failed to register file buffer: ${err.message}`)
       }
 
@@ -135,28 +110,117 @@ export function useParquetLoader() {
       return { success: true, data: rows }
     } catch (err) {
       console.error('Error loading data:', err)
+      return { success: false, error: err.message }
+    }
+  }
 
-      // Provide more helpful error messages for common issues
-      if (err.message && err.message.includes('magic bytes')) {
-        return {
-          success: false,
-          error:
-            'The parquet file appears to be corrupted or incomplete. Please check that the file was uploaded correctly to R2 and has the correct format.'
-        }
+  // Get senders list from parquet file - simplified to ensure it works!
+  async function getSendersList() {
+    try {
+      console.log('Getting senders list')
+
+      // Initialize DuckDB
+      const bundle = {
+        mainModule: '/duckdb/duckdb-mvp.wasm',
+        mainWorker: '/duckdb/duckdb-browser-mvp.worker.js'
       }
 
-      if (err.message && err.message.includes('Failed to fetch')) {
-        return {
-          success: false,
-          error: `Failed to fetch the parquet file. Please check your R2 configuration and ensure the file exists: ${err.message}`
-        }
+      console.log('Creating DuckDB worker...')
+      const worker = new Worker(bundle.mainWorker)
+      const db = new duckdb.AsyncDuckDB(new duckdb.ConsoleLogger(), worker)
+
+      console.log('Instantiating DuckDB...')
+      await db.instantiate(bundle.mainModule)
+
+      // Fetch the parquet file
+      console.log('Fetching parquet file...')
+      const response = await fetchFile()
+
+      if (!response.ok) {
+        throw new Error(`Failed to fetch: ${response.status} ${response.statusText}`)
       }
 
+      console.log('Parquet file fetched, getting array buffer...')
+      const buffer = await response.arrayBuffer()
+      console.log(`Array buffer received, size: ${buffer.byteLength}`)
+
+      if (buffer.byteLength === 0) {
+        throw new Error('Received empty file buffer')
+      }
+
+      // Register the file buffer
+      console.log('Registering parquet file buffer...')
+      await db.registerFileBuffer('data.parquet', new Uint8Array(buffer))
+
+      const conn = await db.connect()
+
+      // Create a table from the parquet file
+      await conn.query(`CREATE TABLE messages AS SELECT * FROM 'data.parquet'`)
+
+      // Check the schema to see what columns we have available
+      const schemaResult = await conn.query(`DESCRIBE messages`)
+      const columns = schemaResult.toArray().map((row) => row.toJSON().column_name)
+      
+      console.log('Available columns:', columns)
+      
+      let senderColumn
+      
+      // Determine which field to use for sender information
+      if (columns.includes('from') && columns.includes('sender')) {
+        // If we have both, use COALESCE to prefer "from" but fall back to "sender"
+        senderColumn = 'COALESCE("from", sender)'
+      } else if (columns.includes('from')) {
+        // If we only have "from", use it with quotes since it's a reserved keyword
+        senderColumn = '"from"'
+      } else if (columns.includes('sender')) {
+        // If we only have "sender", use it
+        senderColumn = 'sender'
+      } else {
+        // If we have neither, throw an error
+        throw new Error('Neither "from" nor "sender" columns found in the data')
+      }
+      
+      console.log(`Using ${senderColumn} for sender information`)
+      
+      // Get a list of sender names and message counts
+      const result = await conn.query(`
+        SELECT 
+          ${senderColumn} as name, 
+          COUNT(*) as count 
+        FROM messages 
+        WHERE ${senderColumn} IS NOT NULL 
+        GROUP BY ${senderColumn} 
+        ORDER BY count DESC
+      `)
+
+      // Convert result to array of objects
+      const senders = result.toArray().map(row => ({
+        name: row[0] || 'Unknown',
+        count: row[1]
+      }))
+
+      // Get total message count 
+      const countResult = await conn.query(`SELECT COUNT(*) FROM messages`)
+      const totalMessages = countResult.toArray()[0][0]
+
+      // Clean up
+      await conn.close()
+      await db.terminate()
+      worker.terminate()
+
+      return {
+        success: true,
+        senders,
+        totalMessages
+      }
+    } catch (err) {
+      console.error('Error getting senders list:', err)
       return { success: false, error: err.message }
     }
   }
 
   return {
-    loadParquetFile
+    loadParquetFile,
+    getSendersList
   }
 }

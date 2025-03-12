@@ -42,30 +42,6 @@
         </div>
       </div>
 
-      <!-- Sender Filter -->
-      <div class="flex items-center gap-2">
-        <label class="text-gray-400 text-sm">Sender:</label>
-        <select v-model="localFilters.sender" @change="applyFilters"
-          class="bg-gray-900 text-white border border-gray-700 rounded py-1 px-2 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500">
-          <option value="">All Senders</option>
-          <option v-for="sender in topSenders" :key="sender.name" :value="sender.name">
-            {{ sender.name }}
-          </option>
-        </select>
-      </div>
-
-      <!-- Chat Filter -->
-      <div class="flex items-center gap-2">
-        <label class="text-gray-400 text-sm">Chat:</label>
-        <select v-model="localFilters.chat" @change="applyFilters"
-          class="bg-gray-900 text-white border border-gray-700 rounded py-1 px-2 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500">
-          <option value="">All Chats</option>
-          <option v-for="chat in topChats" :key="chat.name" :value="chat.name">
-            {{ chat.name }}
-          </option>
-        </select>
-      </div>
-
       <!-- Reset Button -->
       <button @click="resetFilters"
         class="ml-auto bg-blue-600 hover:bg-blue-700 text-white py-1 px-3 rounded text-sm transition-colors">
@@ -90,17 +66,6 @@ import { reactive, computed, watch, ref, onMounted } from 'vue'
 import { useAppStore } from '~/composables/appStore'
 import { useDebounceFn } from '@vueuse/core'
 
-const props = defineProps({
-  topSenders: {
-    type: Array,
-    default: () => []
-  },
-  topChats: {
-    type: Array,
-    default: () => []
-  }
-})
-
 const emit = defineEmits(['filters-changed'])
 
 const appStore = useAppStore()
@@ -109,9 +74,7 @@ const isSearching = ref(false)
 // Create local reactive copy of filters
 const localFilters = reactive({
   startDate: appStore.filters.startDate,
-  endDate: appStore.filters.endDate,
-  sender: appStore.filters.sender,
-  chat: appStore.filters.chat
+  endDate: appStore.filters.endDate
 })
 
 // Search input with debouncing
@@ -121,8 +84,6 @@ const searchInput = ref(appStore.filters.searchTerm)
 watch(() => appStore.filters, (newFilters) => {
   localFilters.startDate = newFilters.startDate
   localFilters.endDate = newFilters.endDate
-  localFilters.sender = newFilters.sender
-  localFilters.chat = newFilters.chat
   searchInput.value = newFilters.searchTerm
 }, { deep: true })
 
@@ -161,16 +122,12 @@ watch(searchInput, (newValue) => {
 const hasActiveFilters = computed(() => {
   return localFilters.startDate ||
     localFilters.endDate ||
-    localFilters.sender ||
-    localFilters.chat ||
     searchInput.value
 })
 
 // Apply filters to the store
 function applyFilters() {
   appStore.setDateRange(localFilters.startDate, localFilters.endDate)
-  appStore.setSender(localFilters.sender)
-  appStore.setChat(localFilters.chat)
   emit('filters-changed')
 }
 
@@ -179,8 +136,6 @@ function resetFilters() {
   appStore.resetFilters()
   localFilters.startDate = ''
   localFilters.endDate = ''
-  localFilters.sender = ''
-  localFilters.chat = ''
   searchInput.value = ''
   emit('filters-changed')
 }

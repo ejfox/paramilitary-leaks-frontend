@@ -1,24 +1,14 @@
 <template>
   <div class="min-h-screen w-screen bg-gray-900 flex flex-col overflow-hidden">
     <!-- Global Filter Bar -->
-    <GlobalFilterBar :top-senders="stats.topSenders" :top-chats="stats.topChats" @filters-changed="applyGlobalFilters"
-      class="flex-shrink-0" />
+    <GlobalFilterBar @filters-changed="applyGlobalFilters" class="flex-shrink-0" />
 
     <!-- Navigation Bar -->
-    <div class="bg-gray-800 border-b border-gray-700 px-4 py-2 flex items-center justify-between">
-      <h1 class="text-white text-lg font-bold">Paramilitary Leaks</h1>
-      <div class="flex space-x-4">
-        <span class="text-blue-400 font-medium text-sm">Visualization Dashboard</span>
-        <NuxtLink to="/feed" class="text-gray-300 hover:text-white transition-colors text-sm flex items-center">
-          <span>Message Feed</span>
-          <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 ml-1" viewBox="0 0 20 20" fill="currentColor">
-            <path fill-rule="evenodd"
-              d="M10.293 5.293a1 1 0 011.414 0l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414-1.414L12.586 11H5a1 1 0 110-2h7.586l-2.293-2.293a1 1 0 010-1.414z"
-              clip-rule="evenodd" />
-          </svg>
-        </NuxtLink>
-      </div>
-    </div>
+    <TopBar current-page="Timeline">
+      <template #additional-links>
+        <!-- Additional page-specific links can be added here if needed -->
+      </template>
+    </TopBar>
 
     <div class="flex flex-1 overflow-hidden">
       <!-- Metadata Sidebar (1/3 width) -->
@@ -41,46 +31,72 @@
           </button>
         </div>
 
-        <!-- Selected Point Card -->
-        <transition name="fade">
-          <div v-if="selectedPoint && !loading" class="feltron-card p-4 mb-4 animate-fadeIn">
-            <div class="flex items-center justify-between mb-2">
-              <div class="flex items-center">
-                <div class="w-3 h-3 rounded-full mr-2"
-                  :style="{ backgroundColor: getSenderColor(getPointSender(selectedPoint)) }">
-                </div>
-                <div class="text-white text-base font-bold truncate">{{ getPointSender(selectedPoint) }}</div>
-              </div>
-              <button @click="clearSelectedPoint" class="text-gray-400 hover:text-white">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
-                  <path fill-rule="evenodd"
-                    d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"
-                    clip-rule="evenodd" />
+        <!-- Selected Point Card - Fixed Height Container -->
+        <div class="feltron-card p-4 mb-4 min-h-[200px] relative">
+          <!-- No selection state -->
+          <div v-if="(!selectedPoint && !hoveredPoint) || loading"
+            class="flex flex-col items-center justify-center h-full text-center">
+            <div class="text-gray-400 text-sm">
+              <div class="mb-2">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 mx-auto text-gray-500" fill="none"
+                  viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+                    d="M15 15l-2 5L9 9l11 4-5 2zm0 0l5 5M7.188 2.239l.777 2.897M5.136 7.965l-2.898-.777M13.95 4.05l-2.122 2.122m-5.657 5.656l-2.12 2.122" />
                 </svg>
-              </button>
-            </div>
-
-            <!-- Message timestamp -->
-            <div class="mb-3">
-              <div class="feltron-title">Timestamp</div>
-              <div class="feltron-value text-white text-base">
-                {{ formatSelectedPointDate(getPointTimestamp(selectedPoint)) }}
               </div>
-            </div>
-
-            <!-- Message content -->
-            <div class="mb-3">
-              <div class="feltron-title">Message</div>
-              <div class="bg-gray-900 p-3 rounded">
-                <div v-if="getPointContent(selectedPoint)"
-                  class="text-white text-sm whitespace-pre-wrap break-words leading-relaxed">
-                  {{ getPointContent(selectedPoint) }}
-                </div>
-                <div v-else class="text-gray-500 text-sm italic">No content</div>
-              </div>
+              <p>Click on a point to view details</p>
+              <p class="text-xs mt-1">Hold Shift to select multiple points</p>
             </div>
           </div>
-        </transition>
+
+          <!-- Point details content -->
+          <transition name="fade" mode="out-in">
+            <div v-if="(selectedPoint || hoveredPoint) && !loading" class="animate-fadeIn">
+              <div class="flex items-center justify-between mb-2">
+                <div class="flex items-center">
+                  <div class="w-3 h-3 rounded-full mr-2"
+                    :style="{ backgroundColor: getSenderColor(getPointSender(hoveredPoint || selectedPoint)) }">
+                  </div>
+                  <div class="text-white text-base font-bold truncate">{{ getPointSender(hoveredPoint || selectedPoint)
+                    }}
+                  </div>
+                </div>
+                <div class="flex items-center">
+                  <div v-if="selectedPoints.length > 1" class="text-blue-400 text-xs mr-2">
+                    {{ selectedPoints.length }} points selected
+                  </div>
+                  <button @click="clearSelectedPoint" class="text-gray-400 hover:text-white">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                      <path fill-rule="evenodd"
+                        d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"
+                        clip-rule="evenodd" />
+                    </svg>
+                  </button>
+                </div>
+              </div>
+
+              <!-- Message timestamp -->
+              <div class="mb-3">
+                <div class="feltron-title">Timestamp</div>
+                <div class="feltron-value text-white text-base">
+                  {{ formatSelectedPointDate(getPointTimestamp(hoveredPoint || selectedPoint)) }}
+                </div>
+              </div>
+
+              <!-- Message content -->
+              <div class="mb-3">
+                <div class="feltron-title">Message</div>
+                <div class="bg-gray-900 p-3 rounded message-container">
+                  <div v-if="getPointContent(hoveredPoint || selectedPoint)"
+                    class="text-white text-sm whitespace-pre-wrap break-words leading-relaxed message-content">
+                    {{ getPointContent(hoveredPoint || selectedPoint) }}
+                  </div>
+                  <div v-else class="text-gray-500 text-sm italic">No content</div>
+                </div>
+              </div>
+            </div>
+          </transition>
+        </div>
 
         <!-- Selected Points Stats -->
         <div v-if="!loading" class="space-y-4 overflow-y-auto">
@@ -100,7 +116,7 @@
           </div>
 
           <!-- Top Senders -->
-          <div class="feltron-card p-3 rounded-lg">
+          <div v-if="!selectedPoint || selectedPoints.length !== 1" class="feltron-card p-3 rounded-lg">
             <div class="feltron-title mb-2">Top Senders</div>
             <div class="space-y-1 max-h-60 overflow-y-auto custom-scrollbar pr-1">
               <div v-for="sender in stats.topSenders" :key="sender.name" @click="highlightSender(sender.name)"
@@ -120,6 +136,20 @@
           <!-- Controls -->
           <div class="feltron-card p-3 rounded-lg">
             <div class="feltron-title">Controls</div>
+
+            <!-- See in feed button (only shown when multiple points are selected) -->
+            <div v-if="selectedPoints.length > 1" class="mb-2">
+              <NuxtLink :to="{ path: '/feed', query: getFeedQueryParams() }"
+                class="w-full bg-green-600 hover:bg-green-700 text-white py-2 px-4 rounded transition-colors flex items-center justify-center">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24"
+                  stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+                </svg>
+                See {{ selectedPoints.length }} Points in Feed
+              </NuxtLink>
+            </div>
+
             <button @click="resetHighlight"
               class="w-full bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded transition-colors">
               Reset View
@@ -132,7 +162,7 @@
       </div>
 
       <!-- Main Visualization (2/3 width) -->
-      <div class="w-2/3 flex flex-col overflow-hidden">
+      <div class="w-2/3 flex flex-col overflow-hidden relative">
         <div v-if="loading" class="flex-1 flex items-center justify-center">
           <div class="flex items-center">
             <div class="animate-spin mr-3">
@@ -147,44 +177,101 @@
           </div>
         </div>
         <div v-if="error" class="text-red-500 p-4">{{ error }}</div>
-        <div v-else-if="activeView === 'time'" class="flex-1 relative">
+
+        <!-- Scatterplot visualization - always present -->
+        <div class="flex-1 relative">
           <canvas ref="canvas" class="absolute inset-0 w-full h-full"></canvas>
         </div>
-        <div v-else-if="activeView === 'metadata'" class="flex-1 overflow-y-auto p-4">
-          <div class="grid grid-cols-2 gap-4">
-            <!-- Total Messages -->
-            <div class="feltron-card p-4">
-              <div class="feltron-title">Total Messages</div>
-              <div class="feltron-value text-white text-4xl font-light">{{ stats.totalMessages.toLocaleString() }}</div>
-            </div>
 
-            <!-- Date Range -->
-            <div class="feltron-card p-4">
-              <div class="feltron-title">Date Range</div>
-              <div class="feltron-value text-white text-xl font-light">{{ stats.dateRange }}</div>
-            </div>
+        <!-- Metadata Modal Overlay -->
+        <transition name="fade">
+          <div v-show="activeView === 'metadata'" class="absolute inset-0 z-10">
+            <!-- Blurred backdrop -->
+            <div class="absolute inset-0 backdrop-blur-sm bg-gray-900/70"></div>
 
-            <!-- Top Senders Visualization -->
-            <div class="feltron-card p-4 col-span-2">
-              <div class="feltron-title">Top Senders</div>
-              <div class="space-y-2 mt-3 max-h-80 overflow-y-auto custom-scrollbar pr-1">
-                <div v-for="(sender, index) in stats.topSenders" :key="sender.name"
-                  class="relative h-8 bg-gray-900 rounded overflow-hidden">
-                  <div class="absolute top-0 left-0 h-full bg-blue-900"
-                    :style="{ width: (sender.count / stats.topSenders[0].count * 100) + '%' }"></div>
-                  <div class="absolute top-0 left-0 h-full w-full px-3 flex items-center justify-between">
-                    <div class="flex items-center">
-                      <div class="w-2 h-2 rounded-full mr-2" :style="{ backgroundColor: getSenderColor(sender.name) }">
+            <!-- Modal content -->
+            <div
+              class="absolute inset-4 overflow-y-auto bg-gray-800/90 rounded-lg border border-gray-700 shadow-2xl p-6">
+              <div class="flex justify-between items-center mb-4">
+                <h2 class="text-white text-xl font-bold">Metadata Analysis</h2>
+                <button @click="activeView = 'time'" class="text-gray-400 hover:text-white transition-colors">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                    <path fill-rule="evenodd"
+                      d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"
+                      clip-rule="evenodd" />
+                  </svg>
+                </button>
+              </div>
+
+              <div class="grid grid-cols-2 gap-4">
+                <!-- Total Messages -->
+                <div class="feltron-card p-4">
+                  <div class="feltron-title">Total Messages</div>
+                  <div class="feltron-value text-white text-4xl font-light">{{ stats.totalMessages.toLocaleString() }}
+                  </div>
+                  <div v-if="selectedPoints.length > 0" class="text-blue-400 text-sm mt-1">
+                    {{ selectedPoints.length }} selected
+                  </div>
+                </div>
+
+                <!-- Date Range -->
+                <div class="feltron-card p-4">
+                  <div class="feltron-title">Date Range</div>
+                  <div class="feltron-value text-white text-xl font-light">{{ stats.dateRange }}</div>
+                </div>
+
+                <!-- Top Senders Visualization -->
+                <div class="feltron-card p-4 col-span-2">
+                  <div class="feltron-title">Top Senders</div>
+                  <div class="space-y-2 mt-3 max-h-80 overflow-y-auto custom-scrollbar pr-1">
+                    <div v-for="(sender, index) in stats.topSenders" :key="sender.name"
+                      class="relative h-8 bg-gray-900 rounded overflow-hidden">
+                      <div class="absolute top-0 left-0 h-full bg-blue-900"
+                        :style="{ width: (sender.count / stats.topSenders[0].count * 100) + '%' }"></div>
+                      <div class="absolute top-0 left-0 h-full w-full px-3 flex items-center justify-between">
+                        <div class="flex items-center">
+                          <div class="w-2 h-2 rounded-full mr-2"
+                            :style="{ backgroundColor: getSenderColor(sender.name) }">
+                          </div>
+                          <span class="text-white text-sm">{{ sender.name }}</span>
+                        </div>
+                        <span class="text-white text-sm font-medium">{{ sender.count.toLocaleString() }}</span>
                       </div>
-                      <span class="text-white text-sm">{{ sender.name }}</span>
                     </div>
-                    <span class="text-white text-sm font-medium">{{ sender.count.toLocaleString() }}</span>
+                  </div>
+                </div>
+
+                <!-- Selected Messages (only shown when points are selected) -->
+                <div v-if="selectedPoints.length > 0" class="feltron-card p-4 col-span-2">
+                  <div class="feltron-title">Selected Messages</div>
+                  <div class="text-white text-sm mb-2">
+                    Showing {{ Math.min(selectedPoints.length, 100) }} of {{ selectedPoints.length }} selected messages
+                  </div>
+
+                  <div class="space-y-3 mt-3 max-h-96 overflow-y-auto custom-scrollbar pr-1">
+                    <div v-for="(point, index) in selectedPoints.slice(0, 100)" :key="index"
+                      class="bg-gray-800 p-3 rounded border-l-2 border-blue-500">
+                      <div class="flex items-center justify-between mb-1">
+                        <div class="flex items-center">
+                          <div class="w-2 h-2 rounded-full mr-2"
+                            :style="{ backgroundColor: getSenderColor(getPointSender(point)) }">
+                          </div>
+                          <span class="text-white text-sm font-medium">{{ getPointSender(point) }}</span>
+                        </div>
+                        <span class="text-gray-400 text-xs">
+                          {{ formatSelectedPointDate(getPointTimestamp(point)) }}
+                        </span>
+                      </div>
+                      <div class="text-white text-sm mt-1 whitespace-pre-wrap break-words">
+                        {{ getPointContent(point) || 'No content' }}
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
             </div>
           </div>
-        </div>
+        </transition>
       </div>
     </div>
   </div>
@@ -198,6 +285,8 @@ import { useAppStore } from '~/composables/appStore'
 import { useColorMap } from '~/composables/useColorMap'
 import * as d3 from 'd3'
 import { format } from 'date-fns'
+import TopBar from '~/components/TopBar.vue'
+import GlobalFilterBar from '~/components/GlobalFilterBar.vue'
 
 const loading = ref(true)
 const error = ref(null)
@@ -209,19 +298,20 @@ const activeView = ref('time')
 const appStore = useAppStore()
 const colorMap = useColorMap()
 
-const { loadParquetFile } = useParquetLoader()
 const {
   canvas,
   initScatterplot,
   transformData,
-  highlightPoints,
   filterPointsWithoutMoving,
   resetView,
   selectedPoint,
   selectedPoints,
+  hoveredPoint,
   clearSelectedPoint,
-  resizeAndCenterVisualization
+  resizeVisualization
 } = useVisualization()
+
+const { loadParquetFile } = useParquetLoader()
 
 // Stats for the sidebar
 const stats = reactive({
@@ -303,9 +393,8 @@ function highlightSender(senderName) {
 
 // Reset all highlights
 function resetHighlight() {
-  highlightedSender.value = null
-  selectedPoints.value = [] // Clear selected points
-  resetView()
+  highlightedSender.value = null;
+  resetView();
 }
 
 // Calculate stats from the data
@@ -391,10 +480,9 @@ function applyGlobalFilters() {
     filtered = filtered.filter(msg => getPointChatName(msg) === filters.chat)
   }
 
-  // Apply search term filter - optimize this for performance
+  // Apply search term filter
   if (filters.searchTerm) {
     const term = filters.searchTerm.toLowerCase()
-
     filtered = filtered.filter(msg => {
       const content = getPointContent(msg);
       return content && content.toLowerCase().includes(term);
@@ -404,37 +492,30 @@ function applyGlobalFilters() {
   filteredData.value = filtered
   calculateStats(filtered)
 
-  // Update visualization without re-arranging points
-  if (activeView.value === 'time') {
-    // Don't call transformData as it re-arranges points
-    // Instead, use highlightPoints to show only the filtered points
+  // Update visualization without moving the camera
+  if (activeView.value === 'time' && filtered.length < rawData.value.length) {
+    // Find indices of filtered points in the original data
+    const rawDataMap = new Map();
+    rawData.value.forEach((item, index) => {
+      const key = getPointTimestamp(item) + '|' + getPointSender(item);
+      rawDataMap.set(key, index);
+    });
 
-    // First reset any previous highlights
-    resetHighlight()
+    const filteredIndices = filtered.map(item => {
+      const key = getPointTimestamp(item) + '|' + getPointSender(item);
+      return rawDataMap.get(key);
+    }).filter(index => index !== undefined);
 
-    // If we have filters active, highlight only the filtered points
-    if (filtered.length < rawData.value.length) {
-      console.time('finding indices');
-
-      // Create a map for faster lookups
-      const rawDataMap = new Map();
-      rawData.value.forEach((item, index) => {
-        const key = getPointTimestamp(item) + '|' + getPointSender(item);
-        rawDataMap.set(key, index);
-      });
-
-      // Find indices of filtered points in the original data
-      const filteredIndices = filtered.map(item => {
-        const key = getPointTimestamp(item) + '|' + getPointSender(item);
-        return rawDataMap.get(key);
-      }).filter(index => index !== undefined);
-
-      console.timeEnd('finding indices');
-
-      if (filteredIndices.length > 0) {
-        filterPointsWithoutMoving(filteredIndices);
-      }
+    if (filteredIndices.length > 0) {
+      // Pass isTextSearch: true when we're filtering by text search term
+      filterPointsWithoutMoving(filteredIndices, !!filters.searchTerm);
+    } else {
+      // If no points match the filter, just clear selection
+      clearSelectedPoint();
     }
+  } else if (activeView.value === 'time') {
+    // If no filters are active, reset to show all points
+    resetView();
   }
 
   console.timeEnd('filtering');
@@ -444,6 +525,60 @@ function applyGlobalFilters() {
 function hasActiveFilters() {
   const filters = appStore.filters;
   return filters.startDate || filters.endDate || filters.sender || filters.chat || filters.searchTerm;
+}
+
+// Generate query parameters for the feed page based on selected points
+function getFeedQueryParams() {
+  if (!selectedPoints.value || selectedPoints.value.length <= 1) return {};
+
+  // Check if all points have the same sender
+  const uniqueSenders = new Set(selectedPoints.value.map(p => getPointSender(p)));
+  if (uniqueSenders.size === 1) {
+    return { sender: Array.from(uniqueSenders)[0] };
+  }
+
+  // Check if all points have the same date
+  const getDateString = (point) => {
+    const timestamp = getPointTimestamp(point);
+    if (!timestamp) return null;
+    return new Date(timestamp).toISOString().split('T')[0]; // Get YYYY-MM-DD
+  };
+
+  const uniqueDates = new Set(selectedPoints.value.map(p => getDateString(p)).filter(Boolean));
+  if (uniqueDates.size === 1) {
+    return { date: Array.from(uniqueDates)[0] };
+  }
+
+  // Check if all points have the same chat
+  const uniqueChats = new Set(selectedPoints.value.map(p => getPointChatName(p)).filter(Boolean));
+  if (uniqueChats.size === 1) {
+    return { chat: Array.from(uniqueChats)[0] };
+  }
+
+  // If points don't share common attributes, just use the date range as fallback
+  const dates = selectedPoints.value
+    .map(p => getPointTimestamp(p))
+    .filter(Boolean)
+    .map(d => new Date(d));
+
+  if (dates.length > 0) {
+    const [minDate, maxDate] = d3.extent(dates);
+    const formatDate = d3.timeFormat('%Y-%m-%d');
+
+    // If date range spans multiple days
+    if (formatDate(minDate) !== formatDate(maxDate)) {
+      return {
+        startDate: formatDate(minDate),
+        endDate: formatDate(maxDate)
+      };
+    } else {
+      // Just one day
+      return { date: formatDate(minDate) };
+    }
+  }
+
+  // Fallback - just return empty params
+  return {};
 }
 
 // Helper functions to handle different data formats
@@ -561,12 +696,7 @@ watch(selectedPoints, (newSelectedPoints) => {
 function handleResize() {
   if (activeView.value === 'time') {
     nextTick(() => {
-      // Just resize the canvas without changing the camera position
-      if (!canvas.value) return;
-      const container = canvas.value.parentElement
-      const rect = container.getBoundingClientRect()
-      canvas.value.width = rect.width
-      canvas.value.height = rect.height
+      resizeVisualization();
     });
   }
 }
@@ -624,19 +754,16 @@ onUnmounted(() => {
 })
 
 // Watch for view changes
-watch(activeView, (newView) => {
+watch(activeView, (newView, oldView) => {
+  console.log(`View changed from ${oldView} to ${newView}`);
+
+  // Just trigger a resize when switching to time view
   if (newView === 'time') {
     nextTick(() => {
-      if (!canvas.value) return;
-
-      // Initialize scatterplot if needed
-      if (!canvas.value.__regl) {
-        initScatterplot();
-        if (filteredData.value.length > 0) {
-          transformData(filteredData.value);
-        }
+      if (canvas.value) {
+        resizeVisualization();
       }
-    })
+    });
   }
 })
 </script>
@@ -644,6 +771,16 @@ watch(activeView, (newView) => {
 <style>
 .tooltip {
   pointer-events: none;
+}
+
+/* Fixed height message container */
+.message-container {
+  height: 150px;
+  overflow-y: auto;
+}
+
+.message-content {
+  word-break: break-word;
 }
 
 .fade-enter-active,
@@ -683,6 +820,20 @@ watch(activeView, (newView) => {
 }
 
 .custom-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(75, 85, 99, 0.7);
+  border-radius: 3px;
+}
+
+/* Apply same scrollbar style to message container */
+.message-container::-webkit-scrollbar {
+  width: 6px;
+}
+
+.message-container::-webkit-scrollbar-track {
+  background: rgba(31, 41, 55, 0.5);
+}
+
+.message-container::-webkit-scrollbar-thumb {
   background: rgba(75, 85, 99, 0.7);
   border-radius: 3px;
 }

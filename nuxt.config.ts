@@ -42,7 +42,9 @@ export default defineNuxtConfig({
       OPENAI_API_KEY: process.env.OPENAI_API_KEY,
       PRODUCTION: process.env.PRODUCTION,
       // R2 Configuration
-      R2_PARQUET_URL: process.env.R2_PARQUET_URL
+      R2_PARQUET_URL: process.env.R2_PARQUET_URL,
+      // App version from package.json
+      version: pkg.version
     }
   },
 

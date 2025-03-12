@@ -1,8 +1,9 @@
-import { ref, onMounted, onUnmounted } from 'vue'
+import { ref, onMounted, onUnmounted, watch } from 'vue'
 import createScatterplot from 'regl-scatterplot'
 import * as d3 from 'd3'
 import { useTimestampParser } from './useTimestampParser'
 import { useColorMap } from './useColorMap'
+import { useEventListener } from '@vueuse/core'
 
 export function useVisualization() {
   const { parseTimestamp } = useTimestampParser()
@@ -10,12 +11,146 @@ export function useVisualization() {
   const canvas = ref(null)
   let scatterplot = null
   let resizeObserver = null
-  let userColorMap = new Map()
   let allData = null
-  let highlightedIndices = null
+  let sortedDataByTime = null // Store data sorted by timestamp for arrow navigation
   const selectedPoint = ref(null)
   const selectedPoints = ref([]) // Track multiple selected points
-  const isMultiSelectMode = ref(false) // Track if we're in multi-select mode
+  const hoveredPoint = ref(null) // Track the currently hovered point
+
+  // Handle keyboard navigation between points
+  function handleLeftArrow() {
+    navigatePoints('prev')
+  }
+
+  function handleRightArrow() {
+    navigatePoints('next')
+  }
+
+  // Navigate to previous or next point
+  function navigatePoints(direction) {
+    // Only proceed if we have a single point selected
+    if (
+      !selectedPoint.value ||
+      selectedPoints.value.length !== 1 ||
+      !sortedDataByTime ||
+      !sortedDataByTime.length
+    ) {
+      return
+    }
+
+    // First try to find the index using direct object reference (most reliable)
+    let currentIndex = sortedDataByTime.findIndex(
+      (item) => item === selectedPoint.value
+    )
+
+    // If that fails, try using timestamp comparison as a fallback
+    if (currentIndex === -1) {
+      console.log(
+        'Could not find point by reference, trying timestamp comparison...'
+      )
+      const currentTimestamp = getPointTimestamp(selectedPoint.value).getTime()
+
+      // Find points with the exact same timestamp
+      const matchingTimestampIndices = sortedDataByTime.reduce(
+        (indices, item, idx) => {
+          const timestamp = getPointTimestamp(item).getTime()
+          if (timestamp === currentTimestamp) indices.push(idx)
+          return indices
+        },
+        []
+      )
+
+      if (matchingTimestampIndices.length > 0) {
+        // If we found multiple messages with the same timestamp,
+        // pick the first one or try to find the best match
+        currentIndex = matchingTimestampIndices[0]
+        console.log(
+          `Found ${matchingTimestampIndices.length} messages with the same timestamp`
+        )
+      } else {
+        // As a last resort, find the closest timestamp
+        console.log('No exact timestamp match, finding closest timestamp...')
+
+        let closestIndex = 0
+        let closestDiff = Infinity
+
+        sortedDataByTime.forEach((item, idx) => {
+          const timestamp = getPointTimestamp(item).getTime()
+          const diff = Math.abs(timestamp - currentTimestamp)
+
+          if (diff < closestDiff) {
+            closestDiff = diff
+            closestIndex = idx
+          }
+        })
+
+        currentIndex = closestIndex
+        console.log(
+          `Found closest timestamp at index ${currentIndex}, diff: ${closestDiff}ms`
+        )
+      }
+    }
+
+    if (currentIndex === -1) {
+      console.error('Could not find current point in sorted data')
+      return
+    }
+
+    // Determine the next point based on direction
+    let nextIndex
+    if (direction === 'prev') {
+      // Previous message in time
+      nextIndex = currentIndex - 1
+      if (nextIndex < 0) nextIndex = sortedDataByTime.length - 1 // Wrap around to the end
+    } else {
+      // Next message in time
+      nextIndex = currentIndex + 1
+      if (nextIndex >= sortedDataByTime.length) nextIndex = 0 // Wrap around to the beginning
+    }
+
+    // Get the next point
+    const nextPoint = sortedDataByTime[nextIndex]
+
+    // Safety check
+    if (!nextPoint) {
+      console.error('Next point is undefined', {
+        nextIndex,
+        totalPoints: sortedDataByTime.length
+      })
+      return
+    }
+
+    // Find the index of this point in the original data array
+    const nextPointIndex = allData.findIndex((item) => item === nextPoint)
+    if (nextPointIndex !== -1) {
+      // Select this point in the scatterplot
+      scatterplot.select([nextPointIndex])
+
+      // Update the selected point reference
+      selectedPoint.value = nextPoint
+      selectedPoints.value = [nextPoint]
+
+      // Optional: scroll the view to center on this point
+      const pointPosition = scatterplot.getPointPosition(nextPointIndex)
+      if (pointPosition) {
+        const currentCamera = scatterplot.get('camera')
+        scatterplot.set({
+          camera: {
+            ...currentCamera,
+            target: [pointPosition.x, pointPosition.y]
+          }
+        })
+      }
+
+      console.log(
+        `Navigated to ${
+          direction === 'prev' ? 'previous' : 'next'
+        } message in time: index ${nextIndex} of ${sortedDataByTime.length}`
+      )
+    } else {
+      console.error('Could not find next point in original data array')
+    }
+  }
 
   function initScatterplot() {
     if (!canvas.value) return
@@ -40,94 +175,95 @@ export function useVisualization() {
       canvas.value.width = width
       canvas.value.height = height
 
+      // Create scatterplot with simplified configuration
       scatterplot = createScatterplot({
         canvas: canvas.value,
         width,
         height,
-        pointSize: 2,
-        opacity: 0.9,
+        pointSize: 1.5,
+        opacity: 0.92,
         backgroundColor: [0.1, 0.1, 0.1, 1],
-        pointSizeSelected: 5, // Make selected points larger
-        pointOutlineWidth: 2, // Add thicker outline to selected points
-        pointOutlineColor: [1, 1, 1, 1], // White outline for selected points
-        opacityInactiveScale: 0.3, // Dim non-selected points
-        opacitySelected: 1.0, // Ensure selected points have full opacity
-        lassoColor: [0.5, 0.5, 1, 0.8], // Blue lasso selection color
-        lassoMinDelay: 10, // Make lasso selection more responsive
-        lassoMinDist: 0.001, // Make lasso selection more sensitive
-        enableLasso: true // Enable lasso selection
-        // Let the scatterplot handle the camera automatically
+        pointSizeSelected: 5,
+        pointOutlineWidth: 2,
+        pointOutlineColor: [1, 1, 1, 1],
+        opacityInactiveScale: 0.3,
+        opacitySelected: 1.0,
+        lassoColor: [0.5, 0.5, 1, 0.8],
+        lassoMinDelay: 10,
+        lassoMinDist: 0.001,
+        enableLasso: true,
+        // Use shift key for lasso selection
+        actionKeyMap: { lasso: 'shift' }
       })
 
-      // Handle single point selection
+      // Handle point selection
       scatterplot.subscribe('select', ({ points }) => {
         if (points && points.length > 0) {
+          // Store current camera state before selection
+          const currentCamera = scatterplot.get('camera')
+
+          // Set the most recently selected point as the current selected point
           const pointIndex = points[0]
           selectedPoint.value = allData ? allData[pointIndex] : null
 
-          // If not in multi-select mode, clear previous selections
-          if (!isMultiSelectMode.value) {
-            selectedPoints.value = []
-          }
+          // Update selected points array
+          selectedPoints.value = points.map((index) => allData[index])
+          console.log('Selected points:', selectedPoints.value.length)
 
-          // Add to selected points if not already selected
-          if (allData && !selectedPoints.value.includes(allData[pointIndex])) {
-            console.log('Adding point to selectedPoints:', pointIndex)
-            selectedPoints.value.push(allData[pointIndex])
-            console.log(
-              'selectedPoints now has',
-              selectedPoints.value.length,
-              'points'
-            )
-          }
-
-          pulseSelectedPoint()
+          // Restore camera position to prevent auto-panning
+          scatterplot.set({ camera: currentCamera })
         } else {
           selectedPoint.value = null
+          selectedPoints.value = []
+        }
+      })
+
+      // Handle hover events
+      scatterplot.subscribe('pointover', ({ points }) => {
+        if (points && points.length > 0 && allData) {
+          const pointIndex = points[0]
+          hoveredPoint.value = allData[pointIndex]
+
+          // Change cursor to pointer
+          if (canvas.value) {
+            canvas.value.style.cursor = 'pointer'
+          }
+        }
+      })
+
+      scatterplot.subscribe('pointout', () => {
+        hoveredPoint.value = null
+
+        // Reset cursor
+        if (canvas.value) {
+          canvas.value.style.cursor = 'default'
         }
       })
 
       // Handle lasso selection
       scatterplot.subscribe('lasso', ({ points }) => {
-        if (points && points.length > 0) {
-          isMultiSelectMode.value = true
+        if (points && points.length > 0 && allData) {
+          // Store current camera state before selection
+          const currentCamera = scatterplot.get('camera')
 
-          // Get the data points for the selected indices
-          console.log('Lasso selected', points.length, 'points')
-
-          // Make sure we have valid indices
-          const validIndices = points.filter(
-            (index) => index >= 0 && index < allData.length
-          )
-          console.log('Valid indices:', validIndices.length)
-
-          // Get the actual data points
-          const newSelectedPoints = validIndices.map((index) => allData[index])
-          console.log('New selected points:', newSelectedPoints.length)
-
-          // Update the selectedPoints array
-          selectedPoints.value = newSelectedPoints
-          console.log(
-            'selectedPoints now has',
-            selectedPoints.value.length,
-            'points'
-          )
+          // Update selected points array
+          selectedPoints.value = points.map((index) => allData[index])
+          console.log('Lasso selected points:', selectedPoints.value.length)
 
           // Set the most recently selected point as the current selected point
-          if (newSelectedPoints.length > 0) {
-            selectedPoint.value =
-              newSelectedPoints[newSelectedPoints.length - 1]
+          if (selectedPoints.value.length > 0) {
+            selectedPoint.value = selectedPoints.value[0]
           }
+
+          // Restore camera position to prevent auto-panning
+          scatterplot.set({ camera: currentCamera })
         }
       })
 
-      // Add keyboard event listeners for multi-select mode
-      window.addEventListener('keydown', handleKeyDown)
-      window.addEventListener('keyup', handleKeyUp)
-
+      // Set up resize observer
       if (!resizeObserver) {
         resizeObserver = new ResizeObserver(() => {
-          resizeAndCenterVisualization()
+          resizeVisualization()
         })
         resizeObserver.observe(canvas.value.parentElement)
       }
@@ -136,24 +272,27 @@ export function useVisualization() {
     }
   }
 
-  // Handle key down events for multi-select mode
-  function handleKeyDown(event) {
-    if (event.key === 'Shift') {
-      isMultiSelectMode.value = true
-      if (canvas.value) {
-        canvas.value.style.cursor = 'crosshair'
-      }
-    }
-  }
+  function getPointTimestamp(point) {
+    const timestamp = point.timestamp
 
-  // Handle key up events for multi-select mode
-  function handleKeyUp(event) {
-    if (event.key === 'Shift') {
-      isMultiSelectMode.value = false
-      if (canvas.value) {
-        canvas.value.style.cursor = 'default'
-      }
+    if (!timestamp) return null
+
+    // If it's already a Date object, return it
+    if (timestamp instanceof Date) return timestamp
+
+    // If it's a string with ISO format
+    if (typeof timestamp === 'string' && timestamp.length >= 10) {
+      const date = new Date(timestamp)
+      if (!isNaN(date.getTime())) return date
     }
+
+    // If it's a number (unix timestamp)
+    if (typeof timestamp === 'number') {
+      const msTimestamp = timestamp < 10000000000 ? timestamp * 1000 : timestamp
+      return new Date(msTimestamp)
+    }
+
+    return null
   }
 
   function transformData(rawData) {
@@ -163,28 +302,21 @@ export function useVisualization() {
     selectedPoints.value = [] // Reset selected points when data changes
 
     console.log(`Processing ${rawData.length} rows of data`)
-    console.log('First row sample:', rawData[0])
 
-    // Check for expected fields in the new format
-    const hasNewFormat =
-      rawData[0].hasOwnProperty('date') ||
-      rawData[0].hasOwnProperty('message') ||
-      rawData[0].hasOwnProperty('from')
-
-    console.log('Using new telegram format:', hasNewFormat)
-
-    // Filter out invalid timestamps
-    const validData = rawData.filter((msg) => {
-      // Handle different timestamp field names
-      const timestampField = hasNewFormat ? 'date' : 'timestamp'
-      const timestamp = parseTimestamp(msg[timestampField])
-      return !isNaN(timestamp)
-    })
+    // Filter out invalid timestamps and transform data
+    const validData = rawData.filter((msg) => getPointTimestamp(msg) !== null)
 
     if (!validData.length) {
       console.warn('No valid dates found after filtering')
       return
     }
+
+    // Create a sorted copy of the data for arrow key navigation
+    sortedDataByTime = [...validData].sort((a, b) => {
+      const timeA = getPointTimestamp(a).getTime()
+      const timeB = getPointTimestamp(b).getTime()
+      return timeA - timeB
+    })
 
     console.log(
       `Filtered ${rawData.length - validData.length} invalid timestamps, ${
@@ -192,62 +324,50 @@ export function useVisualization() {
       } remaining`
     )
 
-    // Make sure the color map is initialized
-    const getSender = (msg) => {
-      return hasNewFormat
-        ? msg.from || msg.sender || 'unknown'
-        : msg.sender_name || msg.sender || 'unknown'
-    }
+    // Initialize color map if needed
+    const getSender = (msg) => msg.sender || 'unknown'
 
-    // Initialize color map if it doesn't have any senders yet
     if (colorMap.getAllSenders().length === 0) {
       colorMap.initialize(validData, getSender)
     }
 
-    // Get all unique senders from the color map
-    const uniqueSenders = colorMap.getAllSenders()
-
-    // Create a mapping for category indices
-    uniqueSenders.forEach((sender, i) => {
-      userColorMap.set(sender, i) // Store index for category coloring
-    })
-
     try {
-      // Handle different timestamp field names
-      const timestampField = hasNewFormat ? 'date' : 'timestamp'
+      // Get the date range
+      const timestamps = validData.map((msg) => getPointTimestamp(msg))
+      const [startDate, endDate] = d3.extent(timestamps)
 
-      const timestamps = validData.map(
-        (m) => new Date(parseTimestamp(m[timestampField]))
-      )
-      const extent = d3.extent(timestamps)
+      // Create scales for x and y coordinates
+      const xScale = d3.scaleTime().domain([startDate, endDate]).range([-1, 1])
 
-      const xScale = d3.scaleTime().domain(extent).range([-1, 1])
-
-      // Prepare data in columnar format
+      // Prepare data in columnar format for the scatterplot
       const x = []
       const y = []
-      const categories = [] // For categorical coloring
+      const categories = []
 
       validData.forEach((msg) => {
-        // Handle different timestamp field names
-        const timestampField = hasNewFormat ? 'date' : 'timestamp'
-        const date = new Date(parseTimestamp(msg[timestampField]))
-        const hours = date.getHours() + date.getMinutes() / 60
+        const date = getPointTimestamp(msg)
+        if (!date) return
 
-        // Handle different sender field names
-        const sender = hasNewFormat
-          ? msg.from || 'unknown'
-          : msg.sender_name || msg.sender || 'unknown'
-
+        // X coordinate: scaled date
         x.push(xScale(date))
-        y.push((hours / 24) * 2 - 1)
-        categories.push(userColorMap.get(sender))
+
+        // Y coordinate: time of day normalized to [-1, 1]
+        const hours = date.getHours()
+        const minutes = date.getMinutes()
+        const normalizedTime = ((hours * 60 + minutes) / (24 * 60)) * 2 - 1
+        y.push(normalizedTime)
+
+        // Category for coloring
+        const sender = getSender(msg)
+        const senderIndex = colorMap.getSenderIndex(sender)
+        categories.push(senderIndex)
       })
 
       console.log(`Generated ${x.length} points for visualization`)
 
       if (scatterplot && x.length > 0) {
         // Prepare colors from the color map
+        const uniqueSenders = colorMap.getAllSenders()
         const colors = uniqueSenders.map((sender) => {
           const colorValue = colorMap.getSenderColorValue(sender)
           const color = d3.rgb(d3.interpolateTurbo(colorValue))
@@ -257,125 +377,47 @@ export function useVisualization() {
         // Set color configuration
         scatterplot.set({
           colorBy: 'category',
-          pointColor: colors
+          pointColor: colors,
+          pointSize: 1.5,
+          opacity: 0.92
         })
 
         // Draw with categories for coloring
         scatterplot.draw({ x, y, category: categories })
-
-        // No need to adjust the camera - let the scatterplot handle it
       }
     } catch (err) {
       console.error('Error transforming data:', err)
     }
   }
 
-  // Highlight specific points (by index) and filter out others
-  function highlightPoints(indices) {
-    if (!scatterplot || !allData || !indices.length) return
-
-    highlightedIndices = indices
-
-    // Update selected points based on highlighted indices
-    selectedPoints.value = indices.map((index) => allData[index])
-
-    try {
-      // Use filter to show only the selected points
-      scatterplot.filter(indices)
-
-      // Set all filtered points to red with full opacity
-      scatterplot.set({
-        opacitySelected: 1.0,
-        colorBy: 'constant',
-        pointColor: [1, 0, 0, 1] // Bright red
-      })
-
-      // Since zoomTo is not available, we'll use the camera to focus on the selected points
-      const selectedData = indices.map((i) => allData[i])
-      const timestamps = selectedData
-        .map((m) => {
-          const ts = parseTimestamp(m.timestamp || m.date)
-          return !isNaN(ts) ? new Date(ts) : null
-        })
-        .filter(Boolean)
-
-      if (timestamps.length === 0) return
-
-      // Get the extent of the selected points
-      const extent = d3.extent(timestamps)
-
-      // Create a slightly expanded time range for better visualization
-      const range = extent[1] - extent[0]
-      const padding = range * 0.1 // 10% padding
-      const paddedExtent = [
-        new Date(extent[0].getTime() - padding),
-        new Date(extent[1].getTime() + padding)
-      ]
-
-      // Calculate the x-scale for the new extent
-      const allTimestamps = allData
-        .map((m) => {
-          const ts = parseTimestamp(m.timestamp || m.date)
-          return !isNaN(ts) ? new Date(ts) : null
-        })
-        .filter(Boolean)
-
-      const fullTimeRange = d3.extent(allTimestamps)
-      const fullRange = fullTimeRange[1] - fullTimeRange[0]
-
-      // Calculate the zoom level and center position
-      const zoomWidth = (range + padding * 2) / fullRange
-      const center = (paddedExtent[0].getTime() + paddedExtent[1].getTime()) / 2
-      const centerNormalized = ((center - fullTimeRange[0]) / fullRange) * 2 - 1
-
-      // Use set() to adjust the view
-      const camera = scatterplot.get('camera')
-      camera.target = [centerNormalized, 0]
-      camera.distance = zoomWidth * 5
-
-      scatterplot.set({ camera })
-    } catch (err) {
-      console.error('Error highlighting points:', err)
-    }
-  }
-
   // Filter points without moving the camera
-  function filterPointsWithoutMoving(indices) {
+  function filterPointsWithoutMoving(indices, isTextSearch = false) {
     if (!scatterplot || !allData || !indices.length) return
 
     console.log(
-      'filterPointsWithoutMoving called with',
+      'Filtering to show',
       indices.length,
-      'indices'
+      'points',
+      isTextSearch ? 'from text search' : ''
     )
 
-    highlightedIndices = indices
-
-    // Update selected points based on highlighted indices
-    const pointsToSelect = indices.map((index) => allData[index])
-    console.log('Setting selectedPoints to', pointsToSelect.length, 'points')
-    selectedPoints.value = pointsToSelect
+    // Update selected points based on filtered indices
+    selectedPoints.value = indices.map((index) => allData[index])
 
     try {
+      // Store current camera state
+      const currentCamera = scatterplot.get('camera')
+
       // Use filter to show only the selected points
       scatterplot.filter(indices)
 
-      // Get all unique senders from the color map
-      const uniqueSenders = colorMap.getAllSenders()
+      // If this is a text search, make points twice as big
+      if (isTextSearch) {
+        scatterplot.set({ pointSize: 3.0 })
+      }
 
-      // Prepare colors from the color map
-      const colors = uniqueSenders.map((sender) => {
-        const colorValue = colorMap.getSenderColorValue(sender)
-        const color = d3.rgb(d3.interpolateTurbo(colorValue))
-        return [color.r / 255, color.g / 255, color.b / 255, 1]
-      })
-
-      // Keep the original categorical coloring
-      scatterplot.set({
-        opacitySelected: 1.0,
-        colorBy: 'category',
-        pointColor: colors
-      })
+      // Restore camera position to prevent auto-panning
+      scatterplot.set({ camera: currentCamera })
     } catch (err) {
       console.error('Error filtering points:', err)
     }
@@ -388,34 +430,21 @@ export function useVisualization() {
     try {
       console.log('Resetting view and restoring colors')
 
-      highlightedIndices = null
+      // Store the current camera state
+      const currentCamera = scatterplot.get('camera')
+
+      // Reset point filtering
+      scatterplot.reset()
+
+      // Reset point size back to default
+      scatterplot.set({ pointSize: 1.5 })
+
+      // Restore camera position to prevent auto-panning
+      scatterplot.set({ camera: currentCamera })
+
+      // Clear selection
       selectedPoint.value = null
       selectedPoints.value = []
-
-      // Remove filtering to show all points
-      scatterplot.unfilter()
-      scatterplot.deselect()
-
-      // Get all unique senders from the color map
-      const uniqueSenders = colorMap.getAllSenders()
-
-      // Prepare colors from the color map
-      const colors = uniqueSenders.map((sender) => {
-        const colorValue = colorMap.getSenderColorValue(sender)
-        const color = d3.rgb(d3.interpolateTurbo(colorValue))
-        return [color.r / 255, color.g / 255, color.b / 255, 1]
-      })
-
-      // Reset opacity settings and restore categorical coloring
-      scatterplot.set({
-        opacity: 0.9,
-        opacitySelected: 1.0,
-        opacityInactiveScale: 0.3,
-        colorBy: 'category',
-        pointColor: colors
-      })
-
-      scatterplot.reset()
     } catch (err) {
       console.error('Error resetting view:', err)
     }
@@ -423,59 +452,17 @@ export function useVisualization() {
 
   // Clear the selected point
   function clearSelectedPoint() {
-    console.log('clearSelectedPoint called')
+    console.log('Clearing selected points')
     selectedPoint.value = null
     selectedPoints.value = []
-    console.log(
-      'selectedPoints cleared, now has',
-      selectedPoints.value.length,
-      'points'
-    )
+
     if (scatterplot) {
       scatterplot.deselect()
     }
   }
 
-  // Add a pulsing effect to the selected point
-  function pulseSelectedPoint() {
-    if (!scatterplot || !selectedPoint.value) return
-
-    // Get the current selected points
-    const currentSelectedPoints = scatterplot.get('selectedPoints')
-    if (!currentSelectedPoints || currentSelectedPoints.length === 0) return
-
-    // Get the current point size
-    let size = 5
-    let growing = true
-
-    // Create a pulsing effect
-    const pulse = () => {
-      if (!scatterplot || !selectedPoint.value) return
-
-      // Update size
-      if (growing) {
-        size += 0.2
-        if (size >= 8) growing = false
-      } else {
-        size -= 0.2
-        if (size <= 5) growing = true
-      }
-
-      // Apply new size
-      scatterplot.set({ pointSizeSelected: size })
-
-      // Continue animation if point is still selected
-      if (selectedPoint.value) {
-        requestAnimationFrame(pulse)
-      }
-    }
-
-    // Start the animation
-    requestAnimationFrame(pulse)
-  }
-
-  // Add this function to ensure proper canvas sizing and point centering
-  function resizeAndCenterVisualization() {
+  // Resize the visualization to match container
+  function resizeVisualization() {
     if (!scatterplot || !canvas.value) return
 
     // Get the current dimensions of the container
@@ -497,13 +484,25 @@ export function useVisualization() {
 
   onMounted(() => {
     if (canvas.value) initScatterplot()
+
+    // Use VueUse's useEventListener instead of manually managing listeners
+    // This will automatically clean up when the component is unmounted
   })
 
-  onUnmounted(() => {
-    // Remove keyboard event listeners
-    window.removeEventListener('keydown', handleKeyDown)
-    window.removeEventListener('keyup', handleKeyUp)
+  // Use VueUse's useEventListener to handle keyboard navigation
+  // These will automatically be cleaned up when the component is unmounted
+  useEventListener(document, 'keydown', (e) => {
+    if (e.key === 'ArrowLeft') {
+      e.preventDefault()
+      handleLeftArrow()
+    } else if (e.key === 'ArrowRight') {
+      e.preventDefault()
+      handleRightArrow()
+    }
+  })
 
+  // The rest of onUnmounted can be simplified since useEventListener handles cleanup
+  onUnmounted(() => {
     if (resizeObserver) {
       resizeObserver.disconnect()
       resizeObserver = null
@@ -512,9 +511,9 @@ export function useVisualization() {
       scatterplot.destroy()
       scatterplot = null
     }
-    userColorMap.clear()
+
     allData = null
-    highlightedIndices = null
+    sortedDataByTime = null
     selectedPoint.value = null
     selectedPoints.value = []
   })
@@ -523,13 +522,12 @@ export function useVisualization() {
     canvas,
     transformData,
     initScatterplot,
-    highlightPoints,
     filterPointsWithoutMoving,
     resetView,
     selectedPoint,
     selectedPoints,
+    hoveredPoint,
     clearSelectedPoint,
-    isMultiSelectMode,
-    resizeAndCenterVisualization
+    resizeVisualization
   }
 }

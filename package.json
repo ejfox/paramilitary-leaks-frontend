@@ -3,24 +3,29 @@
   "version": "0.0.2",
   "private": true,
   "scripts": {
-    "build": "nuxt build",
-    "dev": "nuxt dev",
-    "generate": "nuxt generate",
+    "build": "npm run changelog && node scripts/copy-changelog.js && nuxt build",
+    "dev": "npm run changelog && node scripts/copy-changelog.js && nuxt dev",
+    "generate": "npm run changelog && node scripts/copy-changelog.js && nuxt generate",
     "preview": "nuxt preview",
     "postinstall": "nuxt prepare",
     "prettier": "prettier {*.*,**/*.*} --single-quote --write",
     "lint": "eslint --ext .js,.vue,.ts --ignore-path .gitignore --fix .",
-    "verify-parquet": "node scripts/verify-parquet.js"
+    "verify-parquet": "node scripts/verify-parquet.js",
+    "changelog": "auto-changelog --template keepachangelog --commit-limit false --output CHANGELOG.md",
+    "version": "npm run changelog && git add CHANGELOG.md"
   },
   "devDependencies": {
+    "@iconify/vue": "^4.3.0",
     "@nuxt/devtools": "^1.0.0",
     "@types/node": "^18.17.1",
+    "auto-changelog": "^2.5.0",
     "nuxt": "^3.15.1"
   },
   "dependencies": {
     "@duckdb/duckdb-wasm": "^1.29.0",
     "@nuxtjs/google-fonts": "^3.0.2",
     "@nuxtjs/supabase": "^1.0.1",
+    "@vueuse/core": "^13.0.0",
     "@vueuse/motion": "^2.0.0-beta.25",
     "@vueuse/nuxt": "^9.13.0",
     "apache-arrow": "^19.0.1",
@@ -28,6 +33,7 @@
     "d3": "^7.9.0",
     "date-fns": "^4.1.0",
     "eslint-config-prettier": "^9.0.0",
+    "marked": "^15.0.7",
     "postcss": "^8.4.49",
     "regl": "^2.1.1",
     "regl-scatterplot": "^1.14.0",
