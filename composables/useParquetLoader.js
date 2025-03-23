@@ -107,7 +107,7 @@ export function useParquetLoader() {
       worker.terminate()
 
       console.log(`Successfully loaded ${rows.length} rows from parquet file`)
-      return { success: true, data: rows }
+      return { success: true, data: rows, buffer: buffer }
     } catch (err) {
       console.error('Error loading data:', err)
       return { success: false, error: err.message }
@@ -137,7 +137,9 @@ export function useParquetLoader() {
       const response = await fetchFile()
 
       if (!response.ok) {
-        throw new Error(`Failed to fetch: ${response.status} ${response.statusText}`)
+        throw new Error(
+          `Failed to fetch: ${response.status} ${response.statusText}`
+        )
       }
 
       console.log('Parquet file fetched, getting array buffer...')
@@ -159,12 +161,14 @@ export function useParquetLoader() {
 
       // Check the schema to see what columns we have available
       const schemaResult = await conn.query(`DESCRIBE messages`)
-      const columns = schemaResult.toArray().map((row) => row.toJSON().column_name)
-      
+      const columns = schemaResult
+        .toArray()
+        .map((row) => row.toJSON().column_name)
+
       console.log('Available columns:', columns)
-      
+
       let senderColumn
-      
+
       // Determine which field to use for sender information
       if (columns.includes('from') && columns.includes('sender')) {
         // If we have both, use COALESCE to prefer "from" but fall back to "sender"
@@ -179,9 +183,9 @@ export function useParquetLoader() {
         // If we have neither, throw an error
         throw new Error('Neither "from" nor "sender" columns found in the data')
       }
-      
+
       console.log(`Using ${senderColumn} for sender information`)
-      
+
       // Get a list of sender names and message counts
       const result = await conn.query(`
         SELECT 
@@ -194,12 +198,12 @@ export function useParquetLoader() {
       `)
 
       // Convert result to array of objects
-      const senders = result.toArray().map(row => ({
+      const senders = result.toArray().map((row) => ({
         name: row[0] || 'Unknown',
         count: row[1]
       }))
 
-      // Get total message count 
+      // Get total message count
       const countResult = await conn.query(`SELECT COUNT(*) FROM messages`)
       const totalMessages = countResult.toArray()[0][0]
 

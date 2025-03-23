@@ -4,10 +4,10 @@
       Paramilitary Leaks
       <span class="ml-2 text-xs text-gray-500 bg-gray-700 px-1.5 rounded">{{ version }}</span>
     </h1>
-    <div class="flex space-x-4">
+    <div class="flex items-center overflow-x-auto whitespace-nowrap no-scrollbar">
       <!-- Navigation Links -->
       <NuxtLink v-for="item in navItems" :key="item.path" :to="item.path"
-        class="text-sm flex items-center transition-colors"
+        class="text-sm flex items-center transition-colors mx-2 first:ml-0 last:mr-0"
         :class="currentPage === item.title ? 'text-blue-400 font-medium' : 'text-gray-300 hover:text-white'">
         <!-- Icon -->
         <span v-html="item.icon" class="h-4 w-4 mr-1"></span>
@@ -84,3 +84,14 @@ const navItems = computed(() => [
   }
 ])
 </script>
+
+<style scoped>
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+</style>

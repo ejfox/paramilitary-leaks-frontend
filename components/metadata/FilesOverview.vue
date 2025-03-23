@@ -1,11 +1,9 @@
 <template>
-  <div class="feltron-card p-6 rounded-lg">
-    <div class="feltron-title mb-2">Files Overview</div>
-
-    <div v-if="loading" class="flex items-center justify-center py-12">
+  <div class="w-full">
+    <div v-if="loading" class="flex items-center justify-center py-6">
       <div class="flex items-center">
         <div class="animate-spin mr-3">
-          <svg class="w-5 h-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+          <svg class="w-5 h-5 text-blue-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
             <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
             <path class="opacity-75" fill="currentColor"
               d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z">
@@ -16,62 +14,74 @@
       </div>
     </div>
 
-    <div v-else-if="error" class="text-red-500 p-4 text-center">
-      <div class="text-lg font-bold mb-2">Error Loading Files</div>
-      <div>{{ error }}</div>
+    <div v-else-if="error" class="text-red-400 py-4">
+      <p class="text-red-300 font-medium mb-1">Error Loading Files</p>
+      <p>{{ error }}</p>
     </div>
 
-    <div v-else>
-      <div class="flex items-center justify-between mb-4">
-        <div class="text-white text-sm">
-          <span class="text-gray-400">Total Files:</span>
-          <span class="ml-2 font-bold">{{ formatNumber(totalFiles) }}</span>
+    <div v-else class="w-full">
+      <!-- Overview Stats in a clean grid layout -->
+      <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 sm:gap-6 mb-6">
+        <div class="flex flex-col">
+          <div class="text-gray-400 text-sm mb-1">Total Files</div>
+          <div class="text-white text-xl font-light">{{ formatNumber(totalFiles) }}</div>
         </div>
-        <div class="flex items-center space-x-4">
-          <div class="flex space-x-2">
-            <button @click="sizeMetric = 'count'" :class="sizeMetric === 'count' ? 'text-blue-400' : 'text-gray-400'"
-              class="text-xs uppercase tracking-wider hover:text-blue-300 transition-colors">
-              By Count
-            </button>
-            <button @click="sizeMetric = 'size'" :class="sizeMetric === 'size' ? 'text-blue-400' : 'text-gray-400'"
-              class="text-xs uppercase tracking-wider hover:text-blue-300 transition-colors">
-              By Size
-            </button>
+
+        <div class="flex flex-col">
+          <div class="text-gray-400 text-sm mb-1">Total Size</div>
+          <div class="text-white text-xl font-light">{{ formatFileSize(totalSize) }}</div>
+        </div>
+
+        <div class="flex flex-col">
+          <div class="text-gray-400 text-sm mb-1">Largest Type</div>
+          <div class="text-white text-xl font-light capitalize">
+            {{ largestType }}
           </div>
-          <NuxtLink to="/files"
-            class="text-blue-400 text-xs uppercase tracking-wider hover:text-blue-300 transition-colors flex items-center">
-            <span>Full View</span>
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3 ml-1" fill="none" viewBox="0 0 24 24"
-              stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
-            </svg>
-          </NuxtLink>
+        </div>
+
+        <div class="flex flex-col">
+          <div class="text-gray-400 text-sm mb-1">Avg. File Size</div>
+          <div class="text-white text-xl font-light">
+            {{ totalFiles > 0 ? formatFileSize(totalSize / totalFiles) : '0 B' }}
+          </div>
         </div>
       </div>
 
-      <div class="grid grid-cols-1 gap-4">
+      <!-- File Type Distribution Visualization -->
+      <div class="space-y-6">
         <!-- File Type Blocks -->
-        <div class="bg-gray-800 rounded-lg overflow-hidden p-4">
-          <div ref="fileBlocksContainer" class="w-full h-48"></div>
-        </div>
+        <div ref="fileBlocksContainer" class="w-full h-56 sm:h-64"></div>
 
-        <!-- Total Size -->
-        <div class="bg-gray-800 rounded-lg p-4 flex justify-between items-center">
-          <div>
-            <div class="text-xs text-gray-400 uppercase tracking-wider">Total Size</div>
-            <div class="text-white text-lg font-light">{{ formatFileSize(totalSize) }}</div>
-          </div>
-          <div class="grid grid-cols-3 gap-2">
-            <div v-for="(info, type) in fileTypeInfo" :key="type"
-              class="flex flex-col items-center justify-center text-center p-1 rounded"
-              :class="{ 'ring-2 ring-white': hoveredType === type }"
-              :style="{ backgroundColor: getTypeColor(type) + '33' }" @mouseover="hoveredType = type"
-              @mouseout="hoveredType = null">
-              <div class="w-3 h-3 rounded-full mb-1" :style="{ backgroundColor: getTypeColor(type) }"></div>
-              <div class="text-white text-xs capitalize">{{ type }}</div>
+        <!-- Type Distribution Legend -->
+        <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-4">
+          <div v-for="(info, type) in fileTypeInfo" :key="type"
+            class="flex flex-col gap-1 p-2 rounded transition-colors" :class="{ 'bg-gray-800': hoveredType === type }"
+            :style="hoveredType === type ? { borderLeft: `2px solid ${getTypeColor(type)}` } : {}"
+            @mouseover="hoveredType = type" @mouseout="hoveredType = null">
+            <div class="flex items-center">
+              <div class="w-3 h-3 rounded-full mr-2" :style="{ backgroundColor: getTypeColor(type) }"></div>
+              <div class="text-white text-sm capitalize">{{ type }}</div>
+            </div>
+            <div class="grid grid-cols-2 text-xs pl-5">
+              <div class="text-gray-400">Count:</div>
+              <div class="text-white font-medium">{{ formatNumber(info.count) }}</div>
+              <div class="text-gray-400">Size:</div>
+              <div class="text-white font-medium">{{ formatFileSize(info.size) }}</div>
             </div>
           </div>
         </div>
+      </div>
+
+      <!-- Toggle Button -->
+      <div class="flex justify-center mt-4">
+        <button @click="sizeMetric = sizeMetric === 'count' ? 'size' : 'count'"
+          class="text-sm text-blue-400 hover:text-blue-300 px-2 py-1 rounded flex items-center">
+          <span>Show by {{ sizeMetric === 'count' ? 'Size' : 'Count' }}</span>
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 ml-1" viewBox="0 0 20 20" fill="currentColor">
+            <path
+              d="M8 5a1 1 0 100 2h5.586l-1.293 1.293a1 1 0 001.414 1.414l3-3a1 1 0 000-1.414l-3-3a1 1 0 10-1.414 1.414L13.586 5H8zM12 15a1 1 0 100-2H6.414l1.293-1.293a1 1 0 10-1.414-1.414l-3 3a1 1 0 000 1.414l3 3a1 1 0 001.414-1.414L6.414 15H12z" />
+          </svg>
+        </button>
       </div>
     </div>
   </div>
@@ -120,6 +130,23 @@ const fileTypeInfo = computed(() => {
 
   return result
 })
+
+// Computed property for largest file type
+const largestType = computed(() => {
+  if (!Object.keys(fileTypeInfo.value).length) return 'Unknown';
+
+  let largest = '';
+  let largestSize = 0;
+
+  Object.entries(fileTypeInfo.value).forEach(([type, info]) => {
+    if (info.size > largestSize) {
+      largestSize = info.size;
+      largest = type;
+    }
+  });
+
+  return largest;
+});
 
 // Format numbers in a nice way (1k, 15k, etc.)
 function formatNumber(value) {

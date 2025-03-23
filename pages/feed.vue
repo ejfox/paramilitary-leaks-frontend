@@ -1,11 +1,14 @@
 <template>
-  <div class="min-h-screen w-screen bg-gray-900 flex flex-col overflow-hidden">
+  <div class="min-h-screen h-screen w-screen bg-gray-900 flex flex-col overflow-hidden">
     <!-- Header with navigation -->
-    <TopBar current-page="Message Feed" />
+    <div class="relative">
+      <TopBar current-page="Message Feed" />
+      <GlobalFilterBar @filters-changed="applyGlobalFilters" />
+    </div>
 
     <!-- Toast notification for copy success -->
     <div v-if="showCopyToast"
-      class="fixed bottom-6 right-6 bg-green-600 text-white px-5 py-3 rounded-lg shadow-xl z-50 flex items-center space-x-3 text-sm border border-green-500"
+      class="fixed bottom-6 right-6 bg-green-600 text-white px-5 py-3 rounded shadow-xl z-50 flex items-center space-x-3 text-sm border border-green-500"
       :class="{ 'animate-fade-in': showCopyToast }">
       <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
         <path fill-rule="evenodd"
@@ -22,7 +25,7 @@
     <div class="flex-1 flex flex-col overflow-hidden">
       <!-- Loading state -->
       <div v-if="loading" class="flex-1 flex items-center justify-center">
-        <div class="bg-gray-800 p-4 rounded-lg flex items-center space-x-3">
+        <div class="bg-gray-800 p-3 rounded flex items-center space-x-3">
           <div class="animate-spin">
             <svg class="w-5 h-5 text-blue-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
               <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
@@ -37,7 +40,7 @@
 
       <!-- Error state -->
       <div v-else-if="error" class="flex-1 flex items-center justify-center">
-        <div class="bg-red-900/50 p-4 rounded-lg text-white max-w-lg">
+        <div class="bg-red-900/50 p-3 rounded border-l-2 border-red-500 text-white max-w-lg">
           <h3 class="text-base font-bold mb-1">Error</h3>
           <p class="text-sm">{{ error }}</p>
         </div>
@@ -45,26 +48,26 @@
 
       <!-- Content loaded -->
       <template v-else>
-        <!-- Filter controls - Use scrolling container for small screens -->
-        <div class="bg-gray-800 p-2 border-b border-gray-700 overflow-x-auto">
-          <div class="flex flex-wrap gap-1 md:gap-2 items-center text-xs min-w-max">
+        <!-- Filter controls -->
+        <div class="bg-gray-800 border-b border-gray-700 overflow-x-auto px-3 py-2">
+          <div class="flex flex-wrap gap-3 md:gap-3 items-center text-xs min-w-max">
             <!-- Sender filter -->
-            <div class="flex items-center space-x-1">
-              <label class="text-gray-400">Sender:</label>
+            <div class="flex items-center space-x-2 w-64">
+              <label class="text-gray-400 whitespace-nowrap">Sender:</label>
               <select v-model="filters.sender" @change="applyFilters"
-                class="bg-gray-900 text-white border border-gray-700 rounded py-0.5 px-1 focus:outline-none focus:ring-1 focus:ring-blue-500 w-24 md:w-auto">
-                <option value="">All</option>
-                <option v-for="sender in stats.topSenders" :key="sender.name" :value="sender.name">
-                  {{ sender.name }}
+                class="bg-gray-900 text-white border border-gray-700 rounded py-1 px-2 focus:outline-none focus:border-blue-500 w-full text-xs">
+                <option value="">All Senders</option>
+                <option v-for="sender in stats.allSenders" :key="sender.name" :value="sender.name">
+                  {{ sender.name }} ({{ sender.count }})
                 </option>
               </select>
             </div>
 
             <!-- Chat filter -->
-            <div class="flex items-center space-x-1">
-              <label class="text-gray-400">Chat:</label>
+            <div class="flex items-center space-x-2 w-48">
+              <label class="text-gray-400 whitespace-nowrap">Chat:</label>
               <select v-model="filters.chat" @change="applyFilters"
-                class="bg-gray-900 text-white border border-gray-700 rounded py-0.5 px-1 focus:outline-none focus:ring-1 focus:ring-blue-500 w-24 md:w-auto">
+                class="bg-gray-900 text-white border border-gray-700 rounded py-1 px-2 focus:outline-none focus:border-blue-500 w-full text-xs">
                 <option value="">All</option>
                 <option v-for="chat in stats.topChats" :key="chat.name" :value="chat.name">
                   {{ chat.name }}
@@ -72,45 +75,41 @@
               </select>
             </div>
 
-            <!-- Date range filter - Stack on small screens, flex on larger -->
-            <div class="flex items-center flex-wrap md:flex-nowrap space-x-1">
-              <label class="text-gray-400">Date:</label>
-              <input v-model="filters.startDate" type="date" @change="applyFilters"
-                class="bg-gray-900 text-white border border-gray-700 rounded py-0.5 px-1 w-28 focus:outline-none focus:ring-1 focus:ring-blue-500">
-              <span class="text-gray-400">-</span>
-              <input v-model="filters.endDate" type="date" @change="applyFilters"
-                class="bg-gray-900 text-white border border-gray-700 rounded py-0.5 px-1 w-28 focus:outline-none focus:ring-1 focus:ring-blue-500">
-            </div>
-
             <!-- Sort order -->
-            <div class="flex items-center space-x-1">
-              <label class="text-gray-400">Sort:</label>
+            <div class="flex items-center space-x-2">
+              <label class="text-gray-400 whitespace-nowrap">Sort:</label>
               <select v-model="sortOrder" @change="applySortOrder"
-                class="bg-gray-900 text-white border border-gray-700 rounded py-0.5 px-1 focus:outline-none focus:ring-1 focus:ring-blue-500">
-                <option value="newest">Newest first</option>
-                <option value="oldest">Oldest first</option>
+                class="bg-gray-900 text-white border border-gray-700 rounded py-1 px-2 focus:outline-none focus:border-blue-500 text-xs">
+                <option value="newest">Newest</option>
+                <option value="oldest">Oldest</option>
               </select>
             </div>
 
-            <!-- Action buttons - Fixed width on right -->
+            <!-- Action buttons -->
             <div class="ml-auto flex items-center space-x-1">
               <!-- Reset filters -->
-              <button @click="resetFilters"
-                class="bg-blue-600 hover:bg-blue-700 text-white py-0.5 px-2 rounded text-xs transition-colors">
-                Reset
+              <button @click="resetAllFilters"
+                class="bg-blue-600 hover:bg-blue-700 text-white py-1 px-2 rounded text-xs transition-colors">
+                Reset All
               </button>
 
               <!-- Keyboard shortcuts info -->
               <button @click="showShortcuts = !showShortcuts"
-                class="bg-gray-700 hover:bg-gray-600 text-white py-0.5 px-2 rounded text-xs transition-colors flex items-center">
-                <span class="mr-1">⌨</span> Shortcuts
+                class="bg-gray-700 hover:bg-gray-600 text-white py-1 px-2 rounded text-xs transition-colors flex items-center">
+                <span class="mr-1">⌨</span>
               </button>
             </div>
           </div>
 
+          <!-- This replaces the date inputs in the GlobalFilterBar component -->
+          <div class="mt-3 w-full">
+            <DateHistogramSelector :data="messagesByDate" v-model="dateRange" :sender="filters.sender"
+              :key="`histogram-${filters.sender || 'all'}`" @update:modelValue="handleDateRangeUpdate" />
+          </div>
+
           <!-- Keyboard shortcuts panel -->
           <div v-if="showShortcuts"
-            class="mt-2 bg-gray-900 p-2 rounded text-xs grid grid-cols-2 md:grid-cols-3 gap-x-2 gap-y-1">
+            class="mt-3 bg-gray-900 p-2 rounded text-xs grid grid-cols-2 md:grid-cols-3 gap-x-2 gap-y-1">
             <div class="text-gray-400"><span class="text-white font-mono">←/→</span> Previous/Next page</div>
             <div class="text-gray-400"><span class="text-white font-mono">Home</span> First page</div>
             <div class="text-gray-400"><span class="text-white font-mono">End</span> Last page</div>
@@ -142,7 +141,6 @@
               class="bg-gray-700 hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed text-white py-0.5 px-2 rounded text-xs transition-colors">
               ←
             </button>
-            <span class="text-gray-300 hidden md:inline">Page</span>
             <span class="text-gray-300">{{ currentPage }}/{{ totalPages }}</span>
             <button @click="nextPage" :disabled="currentPage >= totalPages"
               class="bg-gray-700 hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed text-white py-0.5 px-2 rounded text-xs transition-colors">
@@ -151,11 +149,11 @@
           </div>
         </div>
 
-        <!-- Message feed - flex-1 to ensure it takes remaining space -->
+        <!-- Message feed -->
         <div class="flex-1 overflow-auto custom-scrollbar">
           <div v-if="paginatedMessages.length === 0" class="text-center py-8">
             <div class="text-gray-400 text-sm">No messages match your filters</div>
-            <button @click="resetFilters" class="mt-2 text-blue-400 hover:text-blue-300 text-xs">
+            <button @click="resetAllFilters" class="mt-2 text-blue-400 hover:text-blue-300 text-xs">
               Reset Filters
             </button>
           </div>
@@ -204,7 +202,7 @@
                   <!-- Message content -->
                   <td class="py-1 px-2 align-top relative overflow-hidden">
                     <div class="flex justify-between items-start">
-                      <div class="flex-grow pr-8 overflow-hidden">
+                      <div class="flex-grow pr-10 overflow-hidden">
                         <div v-if="getPointContent(message)" class="text-white break-words line-clamp-3">
                           <template v-if="isUrl(getPointContent(message))">
                             <a :href="getPointContent(message)" target="_blank" rel="noopener noreferrer"
@@ -260,8 +258,9 @@
                         </div>
                       </div>
 
-                      <!-- Copy and View buttons side by side - made smaller -->
-                      <div class="absolute top-1 right-1 flex items-center space-x-1">
+                      <!-- Copy and View buttons side by side - positioned better -->
+                      <div
+                        class="absolute top-1 right-1 flex items-center space-x-1 bg-gray-800/80 backdrop-blur-sm rounded">
                         <!-- View message button -->
                         <NuxtLink v-if="message.id" :to="`/messages/${message.id}`"
                           class="p-1 rounded bg-blue-600 text-white hover:bg-blue-700 transition-colors flex items-center"
@@ -293,37 +292,6 @@
             </table>
           </div>
         </div>
-
-        <!-- Pagination controls (bottom) - more compact -->
-        <div class="bg-gray-800 px-2 py-1 border-t border-gray-700 flex items-center justify-between text-xs">
-          <div class="flex items-center space-x-1 md:space-x-2">
-            <div class="text-gray-300 truncate max-w-[150px] md:max-w-full">
-              {{ paginationInfoText }}
-            </div>
-
-            <!-- Copy All Messages button -->
-            <button v-if="paginatedMessages.length > 0" @click="copyAllMessagesAsMarkdown"
-              class="bg-blue-600 hover:bg-blue-700 text-white py-0.5 px-2 rounded text-xs transition-colors flex items-center">
-              <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3 mr-1" viewBox="0 0 20 20" fill="currentColor">
-                <path d="M7 9a2 2 0 012-2h6a2 2 0 012 2v6a2 2 0 01-2 2H9a2 2 0 01-2-2V9z" />
-                <path d="M5 3a2 2 0 00-2 2v6a2 2 0 002 2V5h8a2 2 0 00-2-2H5z" />
-              </svg>
-              <span>Copy</span>
-            </button>
-          </div>
-          <div class="flex items-center space-x-1 md:space-x-2">
-            <button @click="prevPage" :disabled="currentPage === 1"
-              class="bg-gray-700 hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed text-white py-0.5 px-2 rounded text-xs transition-colors">
-              ←
-            </button>
-            <span class="text-gray-300 hidden md:inline">Page</span>
-            <span class="text-gray-300">{{ currentPage }}/{{ totalPages }}</span>
-            <button @click="nextPage" :disabled="currentPage >= totalPages"
-              class="bg-gray-700 hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed text-white py-0.5 px-2 rounded text-xs transition-colors">
-              →
-            </button>
-          </div>
-        </div>
       </template>
     </div>
   </div>
@@ -335,7 +303,11 @@ import { useParquetLoader } from '~/composables/useParquetLoader'
 import { format } from 'date-fns'
 import * as d3 from 'd3'
 import TopBar from '~/components/TopBar.vue'
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
+import { useUrlSearchParams } from '@vueuse/core'
+import GlobalFilterBar from '~/components/GlobalFilterBar.vue'
+import { useAppStore } from '~/composables/appStore'
+import DateHistogramSelector from '~/components/DateHistogramSelector.vue'
 
 // State
 const loading = ref(true)
@@ -349,14 +321,66 @@ const showShortcuts = ref(false)
 const showCopyToast = ref(false) // For copy to clipboard notification
 const copyToastTitle = ref('Message copied as Markdown!') // Dynamic toast title
 const route = useRoute()
+const router = useRouter()
+
+// For v-model with DateHistogramSelector
+const dateRange = reactive({
+  startDate: '',
+  endDate: ''
+})
+
+// Use VueUse's useUrlSearchParams for better URL handling
+const params = useUrlSearchParams('history', {
+  initialValue: {
+    sender: '',
+    chat: '',
+    date: ''
+  },
+  removeFalsyValues: true,
+})
 
 // Filters
 const filters = reactive({
   sender: '',
   chat: '',
   startDate: '',
-  endDate: ''
+  endDate: '',
+  content: ''
 })
+
+// Sync URL params with filters
+watch(params, (newParams) => {
+  let shouldApplyFilters = false
+
+  if (newParams.date !== filters.startDate) {
+    filters.startDate = newParams.date || ''
+    filters.endDate = newParams.date || ''
+    shouldApplyFilters = true
+  }
+
+  if (newParams.sender !== filters.sender) {
+    filters.sender = newParams.sender || ''
+    shouldApplyFilters = true
+  }
+
+  if (newParams.chat !== filters.chat) {
+    filters.chat = newParams.chat || ''
+    shouldApplyFilters = true
+  }
+
+  if (shouldApplyFilters && !loading.value) {
+    applyFilters()
+  }
+}, { deep: true })
+
+// Sync filters back to URL params when filters change
+watch(filters, (newFilters) => {
+  if (!loading.value) {
+    params.date = newFilters.startDate || undefined
+    params.sender = newFilters.sender || undefined
+    params.chat = newFilters.chat || undefined
+  }
+}, { deep: true })
 
 // Stats for filters
 const stats = reactive({
@@ -365,7 +389,8 @@ const stats = reactive({
   uniqueUsers: 0,
   topSenders: [],
   topChats: [],
-  mediaTypes: []
+  mediaTypes: [],
+  allSenders: []
 })
 
 // Computed properties
@@ -407,16 +432,21 @@ function prevPage() {
 
 // Filter methods
 function applyFilters() {
+  console.log(`Applying filters: sender=${filters.sender}, startDate=${filters.startDate}, endDate=${filters.endDate}`)
+
   let filtered = [...rawData.value]
+  console.log(`Starting with ${filtered.length} messages`)
 
   // Apply sender filter
   if (filters.sender) {
     filtered = filtered.filter(msg => getPointSender(msg) === filters.sender)
+    console.log(`After sender filter: ${filtered.length} messages`)
   }
 
   // Apply chat filter
   if (filters.chat) {
     filtered = filtered.filter(msg => getPointChatName(msg) === filters.chat)
+    console.log(`After chat filter: ${filtered.length} messages`)
   }
 
   // Apply date range filter using string comparison
@@ -436,7 +466,7 @@ function applyFilters() {
 
       return false
     })
-    console.log(`Applied start date filter: ${filters.startDate}, filtered to ${filtered.length} messages`)
+    console.log(`After start date filter: ${filtered.length} messages`)
   }
 
   if (filters.endDate) {
@@ -455,10 +485,20 @@ function applyFilters() {
 
       return false
     })
-    console.log(`Applied end date filter: ${filters.endDate}, filtered to ${filtered.length} messages`)
+    console.log(`After end date filter: ${filtered.length} messages`)
   }
 
-  // Sort by timestamp (newest first) - FIX: use Date objects instead of localeCompare
+  // Content search if specified
+  if (filters.content) {
+    const searchLower = filters.content.toLowerCase();
+    filtered = filtered.filter(msg => {
+      const content = getPointContent(msg);
+      return content && content.toLowerCase().includes(searchLower);
+    });
+    console.log(`After content search: ${filtered.length} messages`);
+  }
+
+  // Sort by timestamp 
   filtered.sort((a, b) => {
     const aTimestamp = a.date || a.timestamp
     const bTimestamp = b.date || b.timestamp
@@ -467,8 +507,8 @@ function applyFilters() {
     const aDate = new Date(aTimestamp)
     const bDate = new Date(bTimestamp)
 
-    // For newest first, we want b - a (descending order)
-    return bDate - aDate
+    // Apply sort order
+    return sortOrder.value === 'newest' ? (bDate - aDate) : (aDate - bDate);
   })
 
   filteredMessages.value = filtered
@@ -481,19 +521,34 @@ function applyFilters() {
   }
 }
 
-function resetFilters() {
-  filters.sender = ''
-  filters.chat = ''
-  filters.startDate = ''
-  filters.endDate = ''
+function resetAllFilters() {
+  // Clear the filters object
+  filters.sender = '';
+  filters.chat = '';
+  filters.startDate = '';
+  filters.endDate = '';
+  filters.content = ''; // Clear content search
+
+  // Also reset dateRange for v-model
+  dateRange.startDate = '';
+  dateRange.endDate = '';
+
+  // Clear URL params
+  params.sender = undefined;
+  params.chat = undefined;
+  params.date = undefined;
+
+  // Reset global store filters too
+  const store = useAppStore();
+  store.resetFilters();
 
   // Reset to original data (sorted by timestamp)
   const sorted = [...rawData.value].sort((a, b) => {
-    return new Date(getPointTimestamp(b)) - new Date(getPointTimestamp(a))
-  })
+    return new Date(getPointTimestamp(b)) - new Date(getPointTimestamp(a));
+  });
 
-  filteredMessages.value = sorted
-  currentPage.value = 1
+  filteredMessages.value = sorted;
+  currentPage.value = 1;
 }
 
 // Calculate stats from the data
@@ -550,11 +605,19 @@ function calculateStats(data) {
 
   stats.uniqueUsers = uniqueUsers.size
 
-  // Top senders
+  // All senders
+  stats.allSenders = Object.entries(senderCounts)
+    .map(([name, count]) => ({ name, count }))
+    .sort((a, b) => {
+      // Sort alphabetically by name for easier dropdown navigation
+      return a.name.localeCompare(b.name)
+    })
+
+  // Top senders (for other UI elements)
   stats.topSenders = Object.entries(senderCounts)
     .map(([name, count]) => ({ name, count }))
     .sort((a, b) => b.count - a.count)
-    .slice(0, 20) // Show more senders in the feed view
+    .slice(0, 20) // Only limit for top senders
 
   // Top chats
   stats.topChats = Object.entries(chatCounts)
@@ -702,7 +765,7 @@ function handleKeyDown(e) {
       window.scrollTo(0, 0)
       break
     case 'r':
-      resetFilters()
+      resetAllFilters()
       break
     case 's':
       sortOrder.value = sortOrder.value === 'newest' ? 'oldest' : 'newest'
@@ -930,6 +993,138 @@ function copyAllMessagesAsMarkdown() {
     });
 }
 
+// Apply global filters from the GlobalFilterBar
+function applyGlobalFilters() {
+  const store = useAppStore()
+
+  // Extract date filters
+  if (store.filters.startDate !== filters.startDate) {
+    filters.startDate = store.filters.startDate
+    dateRange.startDate = store.filters.startDate
+  }
+
+  if (store.filters.endDate !== filters.endDate) {
+    filters.endDate = store.filters.endDate
+    dateRange.endDate = store.filters.endDate
+  }
+
+  // Apply search term to message content filter
+  if (store.filters.searchTerm) {
+    filters.content = store.filters.searchTerm
+  } else {
+    filters.content = ''
+  }
+
+  // Apply filters
+  applyFilters()
+}
+
+// Optimize messagesByDate computed property for consistent date ranges
+const messagesByDate = computed(() => {
+  if (!rawData.value || !rawData.value.length) {
+    console.log('No raw data available for histogram');
+    return [];
+  }
+
+  // Get all possible dates from the full dataset first for consistency
+  const allDates = new Set();
+
+  // Process all messages to get the complete date range
+  rawData.value.forEach(msg => {
+    const timestamp = msg.date || msg.timestamp;
+    if (!timestamp) return;
+
+    let dateStr;
+    if (typeof timestamp === 'string' && timestamp.length >= 10) {
+      dateStr = timestamp.substring(0, 10); // YYYY-MM-DD
+    } else if (typeof timestamp === 'number') {
+      const date = new Date(timestamp < 10000000000 ? timestamp * 1000 : timestamp);
+      dateStr = date.toISOString().substring(0, 10);
+    } else {
+      return; // Invalid timestamp
+    }
+
+    allDates.add(dateStr);
+  });
+
+  // Convert all possible dates to array and sort
+  const allDatesArray = Array.from(allDates).sort();
+
+  // Filter messages by sender if a sender filter is active
+  const dataToProcess = filters.sender ?
+    rawData.value.filter(d => getPointSender(d) === filters.sender) :
+    rawData.value;
+
+  // Create a map to accumulate message counts by date
+  const counts = new Map();
+
+  // Initialize counts with zero for all dates to maintain consistent range
+  allDatesArray.forEach(date => {
+    counts.set(date, 0);
+  });
+
+  // Process filtered messages to get counts
+  dataToProcess.forEach(msg => {
+    const timestamp = msg.date || msg.timestamp;
+    if (!timestamp) return;
+
+    let dateStr;
+    if (typeof timestamp === 'string' && timestamp.length >= 10) {
+      dateStr = timestamp.substring(0, 10); // YYYY-MM-DD
+    } else if (typeof timestamp === 'number') {
+      const date = new Date(timestamp < 10000000000 ? timestamp * 1000 : timestamp);
+      dateStr = date.toISOString().substring(0, 10);
+    } else {
+      return; // Invalid timestamp
+    }
+
+    // Increment count for this date
+    counts.set(dateStr, (counts.get(dateStr) || 0) + 1);
+  });
+
+  // Convert to array format and sort by date
+  const result = Array.from(counts, ([date, count]) => ({
+    date,
+    count
+  })).sort((a, b) => a.date.localeCompare(b.date));
+
+  console.log(`Generated histogram data: ${result.length} date points with consistent range, sender filter: ${filters.sender || 'none'}`);
+
+  return result;
+});
+
+// Handle date range updates from the histogram
+function handleDateRangeUpdate(range) {
+  if (range) {
+    filters.startDate = range.startDate || '';
+    filters.endDate = range.endDate || '';
+    applyFilters();
+  }
+}
+
+// Keep dateRange in sync with filters
+watch(() => filters, (newFilters) => {
+  dateRange.startDate = newFilters.startDate;
+  dateRange.endDate = newFilters.endDate;
+}, { deep: true, immediate: true });
+
+// Watch for filter changes to refresh the histogram
+watch(() => filters.sender, (newVal, oldVal) => {
+  if (newVal !== oldVal) {
+    // If the histogram component supports a key prop, we could force a remount
+    // For now just ensure the dateRange is in sync with sender change
+    console.log('Sender changed from', oldVal, 'to', newVal, 'updating histogram')
+
+    // Reset date range when sender changes unless explicitly set
+    if (!params.date) {
+      dateRange.startDate = '';
+      dateRange.endDate = '';
+      filters.startDate = '';
+      filters.endDate = '';
+    }
+  }
+}, { immediate: true });
+
 // Apply URL query parameters when the component mounts
 onMounted(async () => {
   try {
@@ -945,22 +1140,21 @@ onMounted(async () => {
 
     rawData.value = result.data
 
-    // Check for URL query parameters
-    if (route.query.date) {
-      console.log('Found date query parameter:', route.query.date)
-      // Set both start and end date to the same day to filter for a specific day
-      filters.startDate = route.query.date
-      filters.endDate = route.query.date
+    // Use VueUse params instead of manually parsing URL
+    if (params.date) {
+      console.log('Found date param:', params.date)
+      filters.startDate = params.date
+      filters.endDate = params.date
     }
 
-    if (route.query.sender) {
-      console.log('Found sender query parameter:', route.query.sender)
-      filters.sender = route.query.sender
+    if (params.sender) {
+      console.log('Found sender param:', params.sender)
+      filters.sender = params.sender
     }
 
-    if (route.query.chat) {
-      console.log('Found chat query parameter:', route.query.chat)
-      filters.chat = route.query.chat
+    if (params.chat) {
+      console.log('Found chat param:', params.chat)
+      filters.chat = params.chat
     }
 
     // Sort by timestamp (newest first)
@@ -971,8 +1165,8 @@ onMounted(async () => {
     filteredMessages.value = sorted
     calculateStats(result.data)
 
-    // Apply filters if any query parameters were found
-    if (route.query.date || route.query.sender || route.query.chat) {
+    // Apply filters if any parameters were found
+    if (params.date || params.sender || params.chat) {
       applyFilters()
     }
 
@@ -987,31 +1181,6 @@ onMounted(async () => {
   }
 })
 
-// Watch for route query changes
-watch(() => route.query, (newQuery) => {
-  let shouldApplyFilters = false
-
-  if (newQuery.date !== undefined) {
-    filters.startDate = newQuery.date
-    filters.endDate = newQuery.date
-    shouldApplyFilters = true
-  }
-
-  if (newQuery.sender !== undefined) {
-    filters.sender = newQuery.sender
-    shouldApplyFilters = true
-  }
-
-  if (newQuery.chat !== undefined) {
-    filters.chat = newQuery.chat
-    shouldApplyFilters = true
-  }
-
-  if (shouldApplyFilters && !loading.value) {
-    applyFilters()
-  }
-}, { deep: true })
-
 onUnmounted(() => {
   // Remove keyboard event listener
   window.removeEventListener('keydown', handleKeyDown)
@@ -1019,9 +1188,9 @@ onUnmounted(() => {
 </script>
 
 <style scoped>
-/* Custom scrollbar styles */
+/* Custom scrollbar styles to match index and senders pages */
 .custom-scrollbar::-webkit-scrollbar {
-  width: 6px;
+  width: 4px;
 }
 
 .custom-scrollbar::-webkit-scrollbar-track {
@@ -1030,13 +1199,14 @@ onUnmounted(() => {
 
 .custom-scrollbar::-webkit-scrollbar-thumb {
   background: rgba(75, 85, 99, 0.7);
+  border-radius: 3px;
 }
 
-.custom-scrollbar::-webkit-scrollbar-thumb:hover {
-  background: rgba(107, 114, 128, 0.8);
+/* Animation for copy toast */
+.animate-fade-in {
+  animation: fadeIn 0.3s ease-out;
 }
 
-/* Toast notification animation */
 @keyframes fadeIn {
   from {
     opacity: 0;
@@ -1047,17 +1217,5 @@ onUnmounted(() => {
     opacity: 1;
     transform: translateY(0);
   }
-}
-
-.animate-fade-in {
-  animation: fadeIn 0.3s ease-out forwards;
-}
-
-/* Line clamp utility if not available in your Tailwind config */
-.line-clamp-3 {
-  overflow: hidden;
-  display: -webkit-box;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 3;
 }
 </style>

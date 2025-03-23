@@ -58,7 +58,7 @@
                     :style="{ backgroundColor: getSenderColor(getPointSender(hoveredPoint || selectedPoint)) }">
                   </div>
                   <div class="text-white text-base font-bold truncate">{{ getPointSender(hoveredPoint || selectedPoint)
-                    }}
+                  }}
                   </div>
                 </div>
                 <div class="flex items-center">
@@ -178,6 +178,45 @@
         </div>
         <div v-if="error" class="text-red-500 p-4">{{ error }}</div>
 
+        <!-- Search status bar -->
+        <div v-if="!loading && hasActiveFilters() && filteredData.length < rawData.length"
+          class="bg-blue-900 text-white px-4 py-2 flex justify-between items-center">
+          <div class="flex items-center">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
+              <path fill-rule="evenodd"
+                d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z"
+                clip-rule="evenodd" />
+            </svg>
+            <span>
+              Showing {{ filteredData.length.toLocaleString() }} of {{ rawData.length.toLocaleString() }} messages
+              {{ appStore.filters.searchTerm ? `matching "${appStore.filters.searchTerm}"` : '' }}
+            </span>
+          </div>
+          <button @click="resetFilters" class="text-sm hover:underline flex items-center">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1" viewBox="0 0 20 20" fill="currentColor">
+              <path fill-rule="evenodd"
+                d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"
+                clip-rule="evenodd" />
+            </svg>
+            Clear Filters
+          </button>
+        </div>
+
+        <!-- Search loading overlay -->
+        <div v-if="searchLoading" class="absolute inset-0 bg-black bg-opacity-40 flex items-center justify-center z-20">
+          <div class="bg-gray-800 rounded-lg p-4 shadow-lg flex items-center">
+            <div class="animate-spin mr-3">
+              <svg class="w-6 h-6 text-blue-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                <path class="opacity-75" fill="currentColor"
+                  d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z">
+                </path>
+              </svg>
+            </div>
+            <div class="text-white">Searching...</div>
+          </div>
+        </div>
+
         <!-- Scatterplot visualization - always present -->
         <div class="flex-1 relative">
           <canvas ref="canvas" class="absolute inset-0 w-full h-full"></canvas>
@@ -281,22 +320,27 @@
 import { ref, reactive, onMounted, computed, watch, nextTick, onUnmounted } from 'vue'
 import { useVisualization } from '~/composables/useVisualization'
 import { useParquetLoader } from '~/composables/useParquetLoader'
+import { useFuzzySearch } from '~/composables/useFuzzySearch'
 import { useAppStore } from '~/composables/appStore'
 import { useColorMap } from '~/composables/useColorMap'
 import * as d3 from 'd3'
 import { format } from 'date-fns'
 import TopBar from '~/components/TopBar.vue'
 import GlobalFilterBar from '~/components/GlobalFilterBar.vue'
+import debounce from 'lodash/debounce'
 
 const loading = ref(true)
 const error = ref(null)
 const rawData = ref([])
 const filteredData = ref([])
+const parquetBuffer = ref(null)
 const highlightedSender = ref(null)
 const activeView = ref('time')
+const searchLoading = ref(false)
 
 const appStore = useAppStore()
 const colorMap = useColorMap()
+const { searchParquet, isSearching, searchError, cleanup: cleanupSearch } = useFuzzySearch()
 
 const {
   canvas,
@@ -445,13 +489,107 @@ function calculateStats(data) {
 }
 
 // Apply global filters from the store
-function applyGlobalFilters() {
+async function applyGlobalFilters() {
   if (!rawData.value.length) return
 
   console.time('filtering');
+  searchLoading.value = true;
 
-  let filtered = [...rawData.value]
-  const filters = appStore.filters
+  try {
+    // Get filters from the store
+    const filters = appStore.filters
+
+    // If we have a search term, use DuckDB for efficient searching directly on parquet
+    if (filters.searchTerm && filters.searchTerm.trim() !== '' && parquetBuffer.value) {
+      console.log('Searching parquet with term:', filters.searchTerm);
+
+      try {
+        // Use the improved DuckDB searchParquet function which handles all filtering
+        const searchResults = await searchParquet(parquetBuffer.value, filters.searchTerm, {
+          startDate: filters.startDate,
+          endDate: filters.endDate,
+          sender: filters.sender,
+          chat: filters.chat
+        });
+
+        console.log(`DuckDB search returned ${searchResults.length} results out of ${rawData.value.length} total messages`);
+
+        if (searchResults.length > 0 || searchError.value === null) {
+          filteredData.value = searchResults;
+        } else {
+          console.log('DuckDB search failed, falling back to in-memory search');
+          performInMemoryFiltering(filters);
+        }
+      } catch (err) {
+        console.error('DuckDB search failed:', err);
+        console.log('Falling back to in-memory search');
+        performInMemoryFiltering(filters);
+      }
+    } else {
+      // No search term or no parquet buffer, just apply basic filters in memory
+      performInMemoryFiltering(filters);
+    }
+
+    // Update stats
+    calculateStats(filteredData.value);
+
+    // Create a better mapping between filtered data and visualization points
+    if (activeView.value === 'time') {
+      if (filteredData.value.length < rawData.value.length) {
+        console.log('Updating visualization with filtered points');
+
+        // Better way to find matching indices - using a set of unique identifiers
+        const filteredKeys = new Set();
+        filteredData.value.forEach(item => {
+          // Create a unique key for each message combining timestamp and sender
+          const timestamp = getPointTimestamp(item);
+          const sender = getPointSender(item);
+          if (timestamp && sender) {
+            filteredKeys.add(`${timestamp}|${sender}`);
+          }
+        });
+
+        // Find matching indices in raw data
+        const filteredIndices = [];
+        rawData.value.forEach((item, index) => {
+          const timestamp = getPointTimestamp(item);
+          const sender = getPointSender(item);
+          if (timestamp && sender) {
+            const key = `${timestamp}|${sender}`;
+            if (filteredKeys.has(key)) {
+              filteredIndices.push(index);
+            }
+          }
+        });
+
+        console.log(`Found ${filteredIndices.length} matching points in visualization`);
+
+        if (filteredIndices.length > 0) {
+          // Pass isTextSearch: true when we're filtering by text search term
+          filterPointsWithoutMoving(filteredIndices, !!filters.searchTerm);
+        } else {
+          // If no points match the filter, just clear selection
+          clearSelectedPoint();
+        }
+      } else {
+        // If no filters are active, reset to show all points
+        console.log('Resetting visualization to show all points');
+        resetView();
+      }
+    }
+  } catch (err) {
+    console.error('Error applying filters:', err);
+    error.value = err.message;
+  } finally {
+    searchLoading.value = false;
+    console.timeEnd('filtering');
+  }
+}
+
+// Helper function to perform in-memory filtering
+function performInMemoryFiltering(filters) {
+  console.log('Performing in-memory filtering');
+  let filtered = [...rawData.value];
 
   // Apply date filters
   if (filters.startDate) {
@@ -480,45 +618,17 @@ function applyGlobalFilters() {
     filtered = filtered.filter(msg => getPointChatName(msg) === filters.chat)
   }
 
-  // Apply search term filter
-  if (filters.searchTerm) {
-    const term = filters.searchTerm.toLowerCase()
+  // Apply text search if needed
+  if (filters.searchTerm && filters.searchTerm.trim() !== '') {
+    const searchTerm = filters.searchTerm.toLowerCase();
     filtered = filtered.filter(msg => {
       const content = getPointContent(msg);
-      return content && content.toLowerCase().includes(term);
-    })
-  }
-
-  filteredData.value = filtered
-  calculateStats(filtered)
-
-  // Update visualization without moving the camera
-  if (activeView.value === 'time' && filtered.length < rawData.value.length) {
-    // Find indices of filtered points in the original data
-    const rawDataMap = new Map();
-    rawData.value.forEach((item, index) => {
-      const key = getPointTimestamp(item) + '|' + getPointSender(item);
-      rawDataMap.set(key, index);
+      return content && content.toLowerCase().includes(searchTerm);
     });
-
-    const filteredIndices = filtered.map(item => {
-      const key = getPointTimestamp(item) + '|' + getPointSender(item);
-      return rawDataMap.get(key);
-    }).filter(index => index !== undefined);
-
-    if (filteredIndices.length > 0) {
-      // Pass isTextSearch: true when we're filtering by text search term
-      filterPointsWithoutMoving(filteredIndices, !!filters.searchTerm);
-    } else {
-      // If no points match the filter, just clear selection
-      clearSelectedPoint();
-    }
-  } else if (activeView.value === 'time') {
-    // If no filters are active, reset to show all points
-    resetView();
   }
 
-  console.timeEnd('filtering');
+  filteredData.value = filtered;
+  console.log(`In-memory filtering returned ${filtered.length} results`);
 }
 
 // Helper to check if any filters are active
@@ -661,10 +771,13 @@ function getPointChatName(point) {
     ? (point.chat_title || point.group_chat_id || null)
     : (point.chat_name || point.group_chat_id || null);
 
-  // Cache the result
-  chatNameCache.set(point, chatName);
+  // Make sure we're returning a string or null
+  const result = chatName === undefined ? null : chatName;
 
-  return chatName;
+  // Cache the result
+  chatNameCache.set(point, result);
+
+  return result;
 }
 
 // Update stats when selected points change
@@ -711,9 +824,16 @@ onMounted(async () => {
       throw new Error(result.error || 'Failed to load data from R2')
     }
 
+    // Store the raw data
     console.log(`Successfully loaded ${result.data.length} rows from R2`)
     rawData.value = result.data
     filteredData.value = result.data
+
+    // Get the parquet buffer for direct DuckDB queries if available
+    if (result.buffer) {
+      parquetBuffer.value = result.buffer
+      console.log('Parquet buffer stored for direct DuckDB queries')
+    }
 
     // Initialize the color map with all data
     colorMap.initialize(result.data, getPointSender)
@@ -751,6 +871,9 @@ onMounted(async () => {
 onUnmounted(() => {
   // Remove window resize listener
   window.removeEventListener('resize', handleResize);
+
+  // Clean up DuckDB resources
+  cleanupSearch();
 })
 
 // Watch for view changes
@@ -766,6 +889,14 @@ watch(activeView, (newView, oldView) => {
     });
   }
 })
+
+// Reset all filters and reload the visualization
+function resetFilters() {
+  appStore.resetFilters();
+  filteredData.value = rawData.value;
+  calculateStats(rawData.value);
+  resetView();
+}
 </script>
 
 <style>

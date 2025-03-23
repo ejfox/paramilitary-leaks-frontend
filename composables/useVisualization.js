@@ -332,6 +332,9 @@ export function useVisualization() {
     }
 
     try {
+      // Preserve the current camera state if available
+      const currentCamera = scatterplot ? scatterplot.get('camera') : null
+
       // Get the date range
       const timestamps = validData.map((msg) => getPointTimestamp(msg))
       const [startDate, endDate] = d3.extent(timestamps)
@@ -384,6 +387,11 @@ export function useVisualization() {
 
         // Draw with categories for coloring
         scatterplot.draw({ x, y, category: categories })
+
+        // Restore camera position if it was previously set
+        if (currentCamera) {
+          scatterplot.set({ camera: currentCamera })
+        }
       }
     } catch (err) {
       console.error('Error transforming data:', err)
@@ -391,60 +399,107 @@ export function useVisualization() {
   }
 
   // Filter points without moving the camera
-  function filterPointsWithoutMoving(indices, isTextSearch = false) {
-    if (!scatterplot || !allData || !indices.length) return
+  function filterPointsWithoutMoving(
+    indices,
+    isTextSearch = false,
+    dimOthers = false
+  ) {
+    if (!scatterplot || !allData) return
 
-    console.log(
-      'Filtering to show',
-      indices.length,
-      'points',
-      isTextSearch ? 'from text search' : ''
-    )
-
-    // Update selected points based on filtered indices
-    selectedPoints.value = indices.map((index) => allData[index])
-
-    try {
-      // Store current camera state
+    if (indices.length === 0) {
+      // If no indices, just reset the view but preserve camera
       const currentCamera = scatterplot.get('camera')
-
-      // Use filter to show only the selected points
-      scatterplot.filter(indices)
-
-      // If this is a text search, make points twice as big
-      if (isTextSearch) {
-        scatterplot.set({ pointSize: 3.0 })
-      }
-
-      // Restore camera position to prevent auto-panning
+      resetView()
       scatterplot.set({ camera: currentCamera })
-    } catch (err) {
-      console.error('Error filtering points:', err)
+      return
     }
+
+    // Store current camera state
+    const currentCamera = scatterplot.get('camera')
+
+    // Create a new array for filtered indices
+    const filteredIndices = indices
+
+    // Update selectedPoints array regardless of dimming approach
+    selectedPoints.value = filteredIndices.map((index) => allData[index])
+
+    // Determine what to do with points not in the filtered set
+    if (dimOthers || isTextSearch) {
+      // Also dim others for text search
+      // Dim other points by setting them as "inactive" rather than completely filtering them
+      const allIndices = Array.from({ length: allData.length }, (_, i) => i)
+
+      // Set which points are active vs inactive
+      scatterplot.deselect()
+
+      // For text search, we want to highlight all matches
+      if (isTextSearch) {
+        // Set all filtered points as selected
+        scatterplot.select(filteredIndices)
+
+        // Make non-matching points very dim
+        scatterplot.set({
+          opacityInactiveScale: 0.1, // Even dimmer for text search
+          pointsInactive: allIndices.filter((i) => !filteredIndices.includes(i))
+        })
+      } else {
+        // For other filters, use normal dimming
+        scatterplot.select(filteredIndices)
+        scatterplot.set({
+          opacityInactiveScale: 0.15,
+          pointsInactive: allIndices.filter((i) => !filteredIndices.includes(i))
+        })
+      }
+    } else {
+      // Original behavior - filter points
+      scatterplot.select([])
+      scatterplot.filter(filteredIndices)
+    }
+
+    // Restore camera position to prevent auto-panning
+    scatterplot.set({ camera: currentCamera })
   }
 
-  // Reset the view and selection
+  // Reset the view to show all points
   function resetView() {
-    if (!scatterplot) return
+    if (!scatterplot || !allData) return
 
     try {
-      console.log('Resetting view and restoring colors')
+      console.log('Resetting view and redrawing all points')
 
-      // Store the current camera state
+      // Store current camera state - save this FIRST before any other operations
       const currentCamera = scatterplot.get('camera')
 
-      // Reset point filtering
-      scatterplot.reset()
+      // Reset filters and selection
+      scatterplot.filter(null)
+      scatterplot.deselect()
 
-      // Reset point size back to default
-      scatterplot.set({ pointSize: 1.5 })
+      // Reset point size and opacity
+      scatterplot.set({
+        pointSize: 1.5,
+        opacityInactiveScale: 0.3,
+        pointsInactive: [] // Clear any dimmed points
+      })
 
-      // Restore camera position to prevent auto-panning
+      // Redraw all points from scratch if needed
+      if (scatterplot.get('points').length === 0) {
+        // If no points are visible, transform the data again
+        const oldCamera = { ...currentCamera } // Make a copy before transformData
+        transformData(allData)
+        // Restore camera after transform
+        scatterplot.set({ camera: oldCamera })
+      } else {
+        // Otherwise just redraw with current data
+        scatterplot.draw()
+      }
+
+      // Always restore the original camera position at the end
       scatterplot.set({ camera: currentCamera })
 
-      // Clear selection
+      // Clear selected point
       selectedPoint.value = null
       selectedPoints.value = []
+      hoveredPoint.value = null
     } catch (err) {
       console.error('Error resetting view:', err)
     }

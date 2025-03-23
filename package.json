@@ -1,6 +1,6 @@
 {
   "name": "paramilitary-leaks-frontend",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "private": true,
   "scripts": {
     "build": "npm run changelog && node scripts/copy-changelog.js && nuxt build",
@@ -33,6 +33,8 @@
     "d3": "^7.9.0",
     "date-fns": "^4.1.0",
     "eslint-config-prettier": "^9.0.0",
+    "fuse.js": "^6.6.2",
+    "lodash": "^4.17.21",
     "marked": "^15.0.7",
     "postcss": "^8.4.49",
     "regl": "^2.1.1",

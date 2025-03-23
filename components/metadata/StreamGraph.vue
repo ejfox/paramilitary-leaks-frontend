@@ -1,55 +1,95 @@
 <template>
-  <div class="feltron-card p-6 rounded-lg">
-    <div class="feltron-title mb-2">Message Volume by Sender</div>
-    <div class="flex items-center justify-between mb-4">
-      <div class="text-white text-sm">
-        <span class="text-gray-400">Top sender:</span>
-        {{ topSenders.length > 0 ? topSenders[0].name : 'Unknown' }}
+  <div class="w-full">
+    <!-- Controls and Info Bar -->
+    <div class="flex flex-wrap items-center justify-between mb-4 gap-2">
+      <div class="text-white">
+        <div v-if="topSenders.length > 0" class="text-sm">
+          <span class="text-gray-400">Top contributor:</span>
+          <span class="font-medium ml-1">{{ topSenders[0].name }}</span>
+        </div>
       </div>
-      <div class="flex space-x-4">
-        <button @click="streamLayout = 'wiggle'" :class="streamLayout === 'wiggle' ? 'text-blue-400' : 'text-gray-400'"
-          class="text-xs uppercase tracking-wider hover:text-blue-300 transition-colors">
+      
+      <div class="flex space-x-3">
+        <button @click="streamLayout = 'wiggle'" 
+          class="px-2 py-1 rounded text-sm transition-colors"
+          :class="streamLayout === 'wiggle' ? 'bg-blue-800/50 text-blue-300' : 'text-gray-400 hover:text-white'">
           Stream
         </button>
-        <button @click="streamLayout = 'stack'" :class="streamLayout === 'stack' ? 'text-blue-400' : 'text-gray-400'"
-          class="text-xs uppercase tracking-wider hover:text-blue-300 transition-colors">
+        <button @click="streamLayout = 'stack'" 
+          class="px-2 py-1 rounded text-sm transition-colors"
+          :class="streamLayout === 'stack' ? 'bg-blue-800/50 text-blue-300' : 'text-gray-400 hover:text-white'">
           Stacked
         </button>
-        <button @click="streamLayout = 'fill'" :class="streamLayout === 'fill' ? 'text-blue-400' : 'text-gray-400'"
-          class="text-xs uppercase tracking-wider hover:text-blue-300 transition-colors">
-          Fill
+        <button @click="streamLayout = 'fill'" 
+          class="px-2 py-1 rounded text-sm transition-colors"
+          :class="streamLayout === 'fill' ? 'bg-blue-800/50 text-blue-300' : 'text-gray-400 hover:text-white'">
+          Percentage
         </button>
       </div>
     </div>
-    <div class="flex flex-col md:flex-row">
-      <div ref="streamContainer" class="w-full md:w-3/4 h-120 relative"></div>
-      <div ref="legendContainer"
-        class="w-full md:w-1/4 h-60 md:h-120 overflow-y-auto custom-scrollbar md:pl-2 mt-4 md:mt-0 relative isolate">
-        <div
-          class="text-xs text-gray-400 mb-2 uppercase tracking-wider flex justify-between sticky top-0 bg-gray-900 p-1 z-10">
-          <span>Senders</span>
-          <span>Messages</span>
+
+    <!-- Chart Area -->
+    <div class="w-full space-y-4">
+      <!-- The Stream Graph -->
+      <div ref="streamContainer" class="w-full h-[280px] sm:h-[380px] lg:h-[450px]"></div>
+      
+      <!-- Layout Explanation Text -->
+      <div class="text-xs text-gray-400 text-center">
+        {{ layoutExplanation }}
+      </div>
+      
+      <!-- Legend (Below on Mobile, Side on Desktop) -->
+      <div class="mt-4">
+        <div class="text-sm text-gray-200 mb-2 flex justify-between items-center">
+          <div>Top Contributors</div>
+          <div class="text-xs text-gray-400">{{ legendItems.length }} senders total</div>
         </div>
-        <div v-if="legendItems.length" class="space-y-1">
-          <div v-for="item in legendItems" :key="item.name" :class="['flex items-center justify-between p-1 rounded cursor-pointer transition-colors hover:bg-gray-800',
-            streamGraphHighlightedSender === item.name ? 'bg-gray-700' : '']" @mouseover="onHighlightSender(item.name)"
-            @mouseout="onClearHighlight" :data-sender="item.name">
-            <div class="flex items-center overflow-hidden">
+        
+        <!-- Grid Layout for Legend Items -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2">
+          <div v-for="item in legendItems.slice(0, 24)" :key="item.name" 
+            :class="['flex items-center justify-between p-2 rounded cursor-pointer transition-colors',
+            streamGraphHighlightedSender === item.name ? 'bg-gray-800' : 'hover:bg-gray-800/50']" 
+            @mouseover="onHighlightSender(item.name)"
+            @mouseout="onClearHighlight" 
+            :data-sender="item.name">
+            <div class="flex items-center overflow-hidden mr-2">
               <div class="w-3 h-3 rounded-full mr-2 flex-shrink-0"
                 :style="{ backgroundColor: getSenderColor(item.name) }"></div>
-              <div class="text-white text-xs truncate max-w-[120px]">{{ item.name }}</div>
+              <div class="text-white text-sm truncate max-w-[160px]">{{ item.name }}</div>
             </div>
-            <div class="text-gray-400 text-xs">{{ formatNumber(item.volume) }}</div>
+            <div class="text-gray-400 text-xs whitespace-nowrap">{{ formatNumber(item.volume) }}</div>
           </div>
         </div>
-        <div v-if="legendItems.length" class="text-xs text-gray-400 mt-2 sticky bottom-0 bg-gray-900 p-1">
-          {{ legendItems.length }} senders total
+        
+        <!-- Show More Toggle -->
+        <div v-if="legendItems.length > 24" class="text-center mt-3">
+          <button class="text-blue-400 hover:text-blue-300 text-sm flex items-center justify-center mx-auto"
+            @click="showAllLegend = !showAllLegend">
+            {{ showAllLegend ? 'Show Less' : 'Show All Contributors' }}
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 ml-1" viewBox="0 0 20 20" fill="currentColor"
+              :class="{ 'transform rotate-180': showAllLegend }">
+              <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd" />
+            </svg>
+          </button>
+          
+          <!-- Expanded Legend -->
+          <div v-if="showAllLegend" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2 mt-3">
+            <div v-for="item in legendItems.slice(24)" :key="item.name" 
+              :class="['flex items-center justify-between p-2 rounded cursor-pointer transition-colors',
+              streamGraphHighlightedSender === item.name ? 'bg-gray-800' : 'hover:bg-gray-800/50']" 
+              @mouseover="onHighlightSender(item.name)"
+              @mouseout="onClearHighlight" 
+              :data-sender="item.name">
+              <div class="flex items-center overflow-hidden mr-2">
+                <div class="w-3 h-3 rounded-full mr-2 flex-shrink-0"
+                  :style="{ backgroundColor: getSenderColor(item.name) }"></div>
+                <div class="text-white text-sm truncate max-w-[160px]">{{ item.name }}</div>
+              </div>
+              <div class="text-gray-400 text-xs whitespace-nowrap">{{ formatNumber(item.volume) }}</div>
+            </div>
+          </div>
         </div>
-      </div>
-    </div>
-    <div class="flex justify-end mt-2">
-      <div class="text-xs text-gray-400">
-        {{ layoutExplanation }}
       </div>
     </div>
   </div>
@@ -79,13 +119,12 @@ const props = defineProps({
 const emit = defineEmits(['highlight-sender', 'clear-highlight'])
 
 const streamContainer = ref(null)
-const legendContainer = ref(null)
 const { width, height } = useElementSize(streamContainer)
 const streamLayout = ref('wiggle') // 'wiggle' for streamgraph, 'stack' for stacked, 'fill' for normalized
 let streamChart = null
 const colorMap = useColorMap()
 const streamGraphHighlightedSender = ref(null)
-let pathElements = [] // Store references to path elements
+const showAllLegend = ref(false)
 
 // Watch for external highlighting changes
 watch(() => props.highlightedSender, (newValue) => {
@@ -170,21 +209,21 @@ function clearHighlight() {
 
 // Scroll the legend to a specific sender - contained within the legend box
 function scrollToSender(senderName) {
-  if (!legendContainer.value) return
+  if (!streamContainer.value) return
 
   // Find the element by data-sender attribute
-  const legendItem = legendContainer.value.querySelector(`[data-sender="${senderName}"]`)
-  if (!legendItem) return
+  const streamElement = streamContainer.value.querySelector(`[data-sender="${senderName}"]`)
+  if (!streamElement) return
 
   // Get positions for calculation
-  const containerRect = legendContainer.value.getBoundingClientRect()
-  const itemRect = legendItem.getBoundingClientRect()
+  const containerRect = streamContainer.value.getBoundingClientRect()
+  const itemRect = streamElement.getBoundingClientRect()
 
   // Calculate the scroll position manually instead of using scrollIntoView
-  const scrollTop = legendContainer.value.scrollTop + (itemRect.top - containerRect.top) - containerRect.height / 2 + itemRect.height / 2
+  const scrollTop = streamContainer.value.scrollTop + (itemRect.top - containerRect.top) - containerRect.height / 2 + itemRect.height / 2
 
   // Apply scroll within the container only
-  legendContainer.value.scrollTop = Math.max(0, scrollTop)
+  streamContainer.value.scrollTop = Math.max(0, scrollTop)
 }
 
 // Format numbers in a nice way (1k, 15k, etc.)
@@ -347,36 +386,15 @@ onMounted(() => {
 // Update the explanation text at the bottom
 const layoutExplanation = computed(() => {
   if (streamLayout.value === 'wiggle') {
-    return 'Stream view shows relative changes'
+    return 'Stream view highlights changes in messaging patterns over time'
   } else if (streamLayout.value === 'stack') {
-    return 'Stacked view shows absolute counts'
+    return 'Stacked view shows the total message volume by sender over time'
   } else {
-    return 'Fill view shows proportional distribution'
+    return 'Percentage view shows relative contribution of each sender'
   }
 })
 </script>
 
 <style scoped>
-.h-120 {
-  height: 30rem;
-  /* 480px */
-}
-
-.h-60 {
-  height: 15rem;
-  /* 240px */
-}
-
-.custom-scrollbar::-webkit-scrollbar {
-  width: 4px;
-}
-
-.custom-scrollbar::-webkit-scrollbar-track {
-  background: rgba(31, 41, 55, 0.5);
-}
-
-.custom-scrollbar::-webkit-scrollbar-thumb {
-  background: rgba(75, 85, 99, 0.7);
-  border-radius: 3px;
-}
+/* Remove unnecessary height classes */
 </style>

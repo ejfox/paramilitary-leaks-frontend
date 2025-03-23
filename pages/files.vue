@@ -1,19 +1,22 @@
 <template>
-  <div class="min-h-screen w-screen bg-gray-900 flex flex-col">
+  <div class="min-h-screen w-full bg-gray-900 flex flex-col">
     <!-- Navigation Bar -->
     <TopBar current-page="Files Visualization">
       <template #additional-links>
         <button @click="showPathConfig = true"
-          class="text-gray-300 hover:text-white transition-colors text-sm flex items-center">
+          class="text-gray-300 hover:text-white transition-colors text-sm flex items-center mx-2">
           <span>Configure Path</span>
         </button>
       </template>
     </TopBar>
 
+    <!-- Files Filter Bar -->
+    <FilesFilterBar @filters-changed="applyFilters" @reset="handleFilterReset" />
+
     <!-- Path Configuration Modal -->
-    <div v-if="showPathConfig" class="fixed inset-0 bg-black bg-opacity-75 z-50 flex items-center justify-center">
-      <div class="bg-gray-800 rounded-lg p-6 max-w-lg w-full">
-        <h2 class="text-white text-xl font-bold mb-4">Configure Local File Path</h2>
+    <div v-if="showPathConfig" class="fixed inset-0 bg-black bg-opacity-75 z-50 flex items-center justify-center p-4">
+      <div class="bg-gray-800 rounded-lg p-4 sm:p-6 w-full max-w-lg">
+        <h2 class="text-white text-lg sm:text-xl font-bold mb-4">Configure Local File Path</h2>
         <p class="text-gray-300 text-sm mb-4">
           Set the base folder path where all the leaked files are stored on your computer.
           This will enable you to open files directly from the visualization.
@@ -23,7 +26,7 @@
           <label class="block text-gray-400 text-sm mb-2">Base Folder Path</label>
           <input v-model="localBasePath"
             class="w-full bg-gray-700 text-white px-3 py-2 rounded border border-gray-600 focus:border-blue-500 focus:outline-none"
-            placeholder="e.g., /Users/username/Downloads/leaked_files or C:\\Users\\username\\Downloads\\leaked_files" />
+            placeholder="e.g., /Users/username/Downloads/leaked_files" />
           <div class="mt-2 text-xs text-gray-400">
             <div class="flex items-start mb-1">
               <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1 text-blue-400 flex-shrink-0 mt-0.5"
@@ -46,7 +49,7 @@
           </div>
         </div>
 
-        <div class="flex justify-between">
+        <div class="flex flex-col sm:flex-row justify-between gap-2">
           <button @click="showPathConfig = false"
             class="px-4 py-2 bg-gray-700 text-white rounded hover:bg-gray-600 transition-colors">
             Cancel
@@ -73,7 +76,7 @@
       </div>
     </div>
 
-    <div v-else-if="error" class="flex-1 flex items-center justify-center">
+    <div v-else-if="error" class="flex-1 flex items-center justify-center p-4">
       <div class="text-red-500 p-4 max-w-lg text-center">
         <div class="text-xl font-bold mb-2">Error Loading Data</div>
         <div>{{ error }}</div>
@@ -81,43 +84,68 @@
     </div>
 
     <div v-else class="flex-1 flex flex-col">
-      <!-- Stats Bar -->
-      <div class="bg-gray-800 p-4 flex justify-between items-center">
-        <div class="text-white">
-          <span class="text-gray-400 text-sm">Files (excluding archives):</span>
-          <span class="ml-2 font-bold">{{ formatNumber(filteredFilesCount) }}</span>
-          <span v-if="displayedFilesCount < filteredFilesCount" class="text-xs text-gray-400 ml-2">
-            (showing {{ formatNumber(displayedFilesCount) }} largest)
-          </span>
-          <span v-if="activeFilter" class="ml-3 px-2 py-1 bg-blue-900 text-blue-300 text-xs rounded-full">
-            Filtered: {{ activeFilter.charAt(0).toUpperCase() + activeFilter.slice(1) }}
-            <button @click="clearFilter" class="ml-1 text-blue-300 hover:text-white">×</button>
-          </span>
-        </div>
-        <div class="text-white">
-          <span class="text-gray-400 text-sm">Total Size:</span>
-          <span class="ml-2 font-bold">{{ formatFileSize(totalSize) }}</span>
-          <span v-if="localBasePath" class="ml-4 text-xs bg-green-900 text-green-300 px-2 py-1 rounded-full">
-            Local Path Configured
-          </span>
+      <!-- Stats Bar with Mobile Optimization -->
+      <div class="bg-gray-800 p-3 border-b border-gray-700">
+        <div class="flex flex-col sm:flex-row sm:justify-between gap-2 sm:gap-0 sm:items-center">
+          <div class="text-white">
+            <div class="flex flex-wrap items-center">
+              <span class="text-gray-400 text-sm mr-2">Files:</span>
+              <span class="font-bold text-base">{{ formatNumber(filteredFilesCount) }}</span>
+
+              <!-- Mobile-optimized filter badge -->
+              <span v-if="activeFilter || filters?.fileType"
+                class="ml-2 sm:ml-3 px-2.5 py-1 bg-blue-900/80 backdrop-blur-sm text-blue-300 text-xs rounded-full inline-flex items-center">
+                <span>{{ (activeFilter || filters?.fileType).charAt(0).toUpperCase() + (activeFilter ||
+                  filters?.fileType).slice(1) }}</span>
+                <button @click="clearFilter"
+                  class="ml-1.5 bg-blue-700/50 rounded-full h-5 w-5 flex items-center justify-center text-white hover:bg-blue-600/80 transition-colors"
+                  style="min-height: 20px; min-width: 20px;">
+                  ×
+                </button>
+              </span>
+            </div>
+
+            <div v-if="displayedFilesCount < filteredFilesCount"
+              class="text-xs text-gray-400 mt-1 sm:mt-0 sm:ml-2 sm:inline-block">
+              (showing {{ formatNumber(displayedFilesCount) }} largest)
+            </div>
+          </div>
+
+          <div class="text-white mt-2 sm:mt-0 flex flex-wrap items-center">
+            <span class="text-gray-400 text-sm mr-2">Total Size:</span>
+            <span class="font-bold text-base">{{ formatFileSize(totalSize) }}</span>
+
+            <!-- Path configured badge with better mobile visibility -->
+            <span v-if="localBasePath"
+              class="ml-2 sm:ml-4 text-xs bg-green-900/80 backdrop-blur-sm text-green-300 px-2.5 py-1 rounded-full inline-block">
+              <span class="hidden sm:inline">Local Path Configured</span>
+              <span class="sm:hidden">Path Set</span>
+            </span>
+          </div>
         </div>
       </div>
 
       <!-- Treemap Visualization -->
-      <div ref="treemapContainer" class="flex-1 relative">
-        <!-- Smart tooltip that stays on screen -->
+      <div ref="treemapContainer" class="flex-1 relative pb-16 sm:pb-0">
+        <!-- Enhanced tooltip with mobile optimizations -->
         <div v-if="tooltipVisible"
-          class="tooltip-box fixed z-20 bg-gray-900 text-white text-xs p-2 rounded border-l-2 border-blue-500 shadow-lg pointer-events-none"
-          :style="tooltipStyle">
-          <div class="font-bold mb-1 text-[11px] break-words">{{ tooltipData.filename || 'Unknown' }}</div>
-          <div class="grid grid-cols-2 gap-x-2 gap-y-1 text-[10px] mt-2">
-            <div>Size:</div>
-            <div>{{ formatFileSize(tooltipData.size || 0) }}</div>
-            <div>Type:</div>
-            <div>{{ tooltipData.type }}{{ tooltipData.extension ? ` (.${tooltipData.extension})` : '' }}</div>
+          class="tooltip-box fixed z-20 text-white text-xs rounded shadow-lg pointer-events-none"
+          :class="{ 'mobile-tooltip': isMobile }" :style="tooltipStyle">
+          <div class="font-bold mb-1.5 text-[11px] sm:text-xs break-words border-b border-gray-700 pb-1.5">
+            {{ tooltipData.filename || 'Unknown' }}
           </div>
-          <div v-if="localBasePath" class="mt-1 pt-1 border-t border-gray-700 text-[10px] text-gray-400 text-center">
-            Double-click to open file
+          <div class="grid grid-cols-2 gap-x-2 gap-y-1.5 text-[10px] sm:text-xs mt-2">
+            <div class="text-gray-300">Size:</div>
+            <div class="font-medium">{{ formatFileSize(tooltipData.size || 0) }}</div>
+            <div class="text-gray-300">Type:</div>
+            <div class="font-medium">
+              {{ tooltipData.type.charAt(0).toUpperCase() + tooltipData.type.slice(1) }}
+              {{ tooltipData.extension ? ` (.${tooltipData.extension})` : '' }}
+            </div>
+          </div>
+          <div v-if="localBasePath" class="mt-2 pt-1.5 border-t border-gray-700 text-[10px] sm:text-xs text-center">
+            <span v-if="isMobile">Tap twice to open file</span>
+            <span v-else>Double-click to open file</span>
           </div>
         </div>
       </div>
@@ -131,6 +159,7 @@ import { useTelegramFilesLoader } from '~/composables/useTelegramFilesLoader'
 import { useLocalStorage } from '@vueuse/core'
 import * as d3 from 'd3'
 import TopBar from '~/components/TopBar.vue'
+import FilesFilterBar from '~/components/FilesFilterBar.vue'
 
 const loading = ref(true)
 const error = ref(null)
@@ -160,7 +189,17 @@ const tooltipStyle = ref({
   maxWidth: '260px'
 })
 
+// Track if we're on mobile for UI adaptations
+const isMobile = ref(false)
+
 const { loadTelegramFiles } = useTelegramFilesLoader()
+
+// All filter state
+const filters = reactive({
+  searchTerm: '',
+  fileType: null, // Replaces activeFilter
+  sizeRange: { min: 0, max: Infinity }
+})
 
 // Save path configuration
 function savePathConfig() {
@@ -257,7 +296,7 @@ function getChatName(filename) {
   return name
 }
 
-// Show tooltip with simpler positioning
+// Show tooltip with simpler positioning and mobile awareness
 function showTooltip(event, d) {
   const file = d.data.originalData;
 
@@ -267,13 +306,54 @@ function showTooltip(event, d) {
   tooltipData.type = d.data.type;
   tooltipData.extension = file.extension;
 
-  // Position tooltip relative to mouse
+  // Position tooltip relative to mouse, with awareness of screen boundaries
+  const windowWidth = window.innerWidth;
+  const windowHeight = window.innerHeight;
+
+  // Set differently for touch vs mouse events
+  let left, top;
+
+  if (isMobile.value) {
+    // For mobile, position tooltip in a more thumb-friendly zone
+    // Ensure it's in the lower half of the screen for thumb accessibility, but not at the very bottom
+    left = Math.min(windowWidth - 230, Math.max(10, event.clientX - 100));
+
+    // Keep tooltip away from the filter button at the bottom
+    top = Math.min(windowHeight - 180, Math.max(windowHeight / 2, event.clientY - 70));
+
+    // Add slight vibration feedback for touch devices
+    if ('vibrate' in navigator) {
+      navigator.vibrate(15); // very subtle
+    }
+  } else {
+    // Default position for desktop
+    left = event.clientX + 10;
+    top = event.clientY + 10;
+
+    // Check if tooltip would go off right edge
+    if (left + 260 > windowWidth) {
+      left = event.clientX - 270; // Place to the left of cursor
+    }
+
+    // Check if tooltip would go off bottom edge
+    if (top + 130 > windowHeight) {
+      top = event.clientY - 140; // Place above cursor
+    }
+
+    // Ensure tooltip doesn't go off left or top edge
+    left = Math.max(10, left);
+    top = Math.max(10, top);
+  }
+
   tooltipStyle.value = {
-    left: `${event.clientX}px`,
-    top: `${event.clientY}px`,
-    transform: 'translate(10px, 10px)',
-    width: '260px',
-    maxWidth: '260px'
+    left: `${left}px`,
+    top: `${top}px`,
+    transform: 'none',
+    width: isMobile.value ? '220px' : '260px',
+    maxWidth: Math.min(isMobile.value ? 220 : 260, windowWidth - 20) + 'px',
+    // Add a backdrop blur on mobile for better readability
+    backdropFilter: isMobile.value ? 'blur(3px)' : 'none',
+    background: isMobile.value ? 'rgba(17, 24, 39, 0.95)' : 'rgb(17, 24, 39)'
   };
 
   tooltipVisible.value = true;
@@ -284,7 +364,70 @@ function hideTooltip() {
   tooltipVisible.value = false;
 }
 
-// Create the treemap visualization
+// Function to apply filters
+function applyFilters(newFilters) {
+  console.log('Applying filters:', newFilters)
+
+  // If new filters are passed in, update our filter state
+  if (newFilters) {
+    Object.assign(filters, newFilters)
+
+    // Sync activeFilter with the new filter system
+    activeFilter.value = filters.fileType
+  }
+
+  // Update URL to support permalinks
+  updateFilterURL()
+
+  // Recreate treemap with new filters
+  createTreemap()
+}
+
+// Handle filter reset
+function handleFilterReset() {
+  console.log('Resetting all filters')
+
+  filters.searchTerm = ''
+  filters.fileType = null
+  filters.sizeRange = { min: 0, max: Infinity }
+
+  // Clear URL params
+  updateFilterURL()
+
+  // Sync with legacy filter system
+  activeFilter.value = null
+
+  // Add haptic feedback on mobile
+  if (isMobile.value && 'vibrate' in navigator) {
+    navigator.vibrate([40, 30, 40])
+  }
+
+  // Recreate visualization
+  createTreemap()
+}
+
+// Update URL with current filter state
+function updateFilterURL() {
+  const params = new URLSearchParams()
+
+  if (filters.searchTerm) params.set('search', filters.searchTerm)
+  if (filters.fileType) params.set('type', filters.fileType)
+  if (filters.sizeRange.min > 0) params.set('minSize', filters.sizeRange.min.toString())
+  if (filters.sizeRange.max < Infinity) params.set('maxSize', filters.sizeRange.max.toString())
+
+  const newURL = window.location.pathname + (params.toString() ? `?${params.toString()}` : '')
+  window.history.replaceState({}, '', newURL)
+}
+
+// Function to clear the active filter
+function clearFilter() {
+  activeFilter.value = null;
+  filters.fileType = null; // Sync with new filter system
+  updateFilterURL();
+  createTreemap();
+}
+
+// Create the treemap visualization with mobile awareness
 function createTreemap() {
   if (!treemapContainer.value || !filesData.value.length) return
 
@@ -293,16 +436,36 @@ function createTreemap() {
 
   const container = treemapContainer.value
   const width = container.clientWidth
-  const height = container.clientHeight
+
+  // Account for bottom padding on mobile
+  const height = container.clientHeight - (isMobile.value ? 16 : 0)
 
   // Filter out .7z files
   let filteredFiles = filesData.value.filter(file => {
     return !(file.extension === '7z' || file.mime_type === 'application/x-7z-compressed')
   })
 
-  // Apply type filter if active
-  if (activeFilter.value) {
-    filteredFiles = filteredFiles.filter(file => getFileType(file) === activeFilter.value)
+  // Apply type filter (support both activeFilter and new filter system)
+  if (activeFilter.value || filters?.fileType) {
+    const typeFilter = filters?.fileType || activeFilter.value
+    filteredFiles = filteredFiles.filter(file => getFileType(file) === typeFilter)
+  }
+
+  // Apply search term filter if exists in new filter system
+  if (filters?.searchTerm) {
+    const term = filters.searchTerm.toLowerCase()
+    filteredFiles = filteredFiles.filter(file => {
+      const fileName = file.filename?.toLowerCase() || ''
+      return fileName.includes(term)
+    })
+  }
+
+  // Apply size filters if they exist in new filter system
+  if (filters?.sizeRange?.min > 0 || filters?.sizeRange?.max < Infinity) {
+    filteredFiles = filteredFiles.filter(file => {
+      const size = file.size || 0
+      return size >= filters.sizeRange.min && size <= filters.sizeRange.max
+    })
   }
 
   // Update filtered count
@@ -310,7 +473,8 @@ function createTreemap() {
 
   // Performance optimization for large datasets
   let filesToDisplay = filteredFiles;
-  const MAX_DISPLAY_FILES = 1000; // Limit for better performance
+  // Reduce max display on mobile for better performance
+  const MAX_DISPLAY_FILES = isMobile ? 400 : 1000;
 
   if (filteredFiles.length > MAX_DISPLAY_FILES) {
     console.log(`Limiting display to ${MAX_DISPLAY_FILES} files for performance (out of ${filteredFiles.length})`);
@@ -336,12 +500,12 @@ function createTreemap() {
     }))
   }
 
-  // Create the treemap layout
+  // Create the treemap layout with better mobile spacing
   const treemap = d3.treemap()
     .size([width, height])
-    .paddingOuter(3)
-    .paddingTop(20)
-    .paddingInner(2)
+    .paddingOuter(isMobile ? 2 : 3) // Slightly larger padding on mobile for better touch targets
+    .paddingTop(isMobile ? 10 : 20)
+    .paddingInner(isMobile ? 2 : 2) // Increase inner padding on mobile for better touch targets
     .round(true)
 
   // Create the hierarchy
@@ -370,72 +534,120 @@ function createTreemap() {
     .join('g')
     .attr('transform', d => `translate(${d.x0},${d.y0})`)
 
-  // Add rectangles for each file
+  // Add rectangles for each file with better touch handling
   leaf.append('rect')
     .attr('width', d => d.x1 - d.x0)
     .attr('height', d => d.y1 - d.y0)
     .attr('fill', d => typeColorScale(d.data.type))
-    .attr('rx', 1) // Smaller corner radius
+    .attr('rx', isMobile ? 2 : 1) // Larger corner radius on mobile
     .attr('stroke-width', 0) // Remove strokes
     .on('mouseover', function (event, d) {
-      // Highlight this rectangle on hover with a brighter color
-      const currentColor = d3.select(this).attr('fill');
+      // Highlight rectangle on hover
       d3.select(this)
         .transition()
         .duration(100)
-        .attr('fill', d3.color(currentColor).brighter(0.5))
-        .attr('filter', 'drop-shadow(0 0 2px rgba(255,255,255,0.5))');
+        .attr('fill', d3.color(d3.select(this).attr('fill')).brighter(0.5))
+        .attr('filter', 'drop-shadow(0 0 3px rgba(255,255,255,0.6))');
 
       showTooltip(event, d);
     })
     .on('mouseout', function (event, d) {
       // Restore original color
-      const originalColor = typeColorScale(d.data.type);
-
       d3.select(this)
         .transition()
         .duration(100)
-        .attr('fill', originalColor)
+        .attr('fill', typeColorScale(d.data.type))
         .attr('filter', null);
 
       hideTooltip();
     })
     .on('mousemove', function (event, d) {
       if (tooltipVisible.value) {
-        tooltipStyle.value = {
-          left: `${event.clientX}px`,
-          top: `${event.clientY}px`,
-          transform: 'translate(10px, 10px)',
-          width: '260px',
-          maxWidth: '260px'
-        };
+        // Update tooltip position with the smart positioning
+        showTooltip(event, d);
       }
     })
-    .style('cursor', localBasePath.value ? 'pointer' : 'default') // Show pointer cursor if local path is configured
+    .on('touchstart', function (event, d) {
+      // Prevent default to avoid scrolling
+      event.preventDefault();
+
+      // Show tooltip on touch
+      d3.select(this)
+        .transition()
+        .duration(100)
+        .attr('fill', d3.color(d3.select(this).attr('fill')).brighter(0.5))
+        .attr('filter', 'drop-shadow(0 0 3px rgba(255,255,255,0.6))');
+
+      showTooltip(event.touches[0], d);
+
+      // Add a temporary touch-class to identify this element
+      d3.select(this).classed('touch-active', true);
+    })
+    .on('touchend', function () {
+      // Hide tooltip and restore color when touch ends
+      d3.select(this)
+        .transition()
+        .duration(100)
+        .attr('fill', d => typeColorScale(d.data.type))
+        .attr('filter', null)
+        .classed('touch-active', false);
+
+      // Only hide tooltip after a delay to allow for tap-to-open
+      setTimeout(() => {
+        // Only hide if no new touch has started
+        if (!d3.select('.touch-active').empty()) return;
+        hideTooltip();
+      }, 500);
+    })
+    .on('touchmove', function (event) {
+      // Update tooltip on touch move
+      if (tooltipVisible.value && !d3.select('.touch-active').empty()) {
+        showTooltip(event.touches[0], d3.select('.touch-active').datum());
+      }
+    })
+    .style('cursor', localBasePath.value ? 'pointer' : 'default')
     .on('dblclick', function (event, d) {
-      // Open file on double-click if local path is configured
       if (localBasePath.value) {
         openLocalFile(d.data.originalData.filename);
       }
+    })
+    .on('click', function (event, d) {
+      // For mobile: single tap shows tooltip, double tap opens file
+      if (isMobile.value && localBasePath.value) {
+        // We'll use a timeout to detect single vs double tap
+        if (!window.tapTimeout) {
+          window.tapTimeout = setTimeout(() => {
+            window.tapTimeout = null;
+          }, 300);
+        } else {
+          // This is a double-tap
+          clearTimeout(window.tapTimeout);
+          window.tapTimeout = null;
+          openLocalFile(d.data.originalData.filename);
+        }
+      }
     });
 
-  // Add text labels for larger rectangles - optimize for performance
+  // Add text labels for larger rectangles - optimize for performance and mobile
   leaf.filter(d => {
     // Only add text to rectangles that are large enough
+    // Use smaller thresholds on mobile
     const width = d.x1 - d.x0;
     const height = d.y1 - d.y0;
-    return width > 40 && height > 20;
+    return isMobile.value ? (width > 40 && height > 20) : (width > 40 && height > 20);
   })
     .append('text')
     .attr('x', 4)
     .attr('y', 14)
     .attr('fill', 'white')
-    .attr('font-size', '10px')
+    .attr('font-size', isMobile.value ? '9px' : '10px') // Slightly larger font on mobile for readability
     .text(d => {
-      // Keep names short but informative
+      // Keep names short but informative, even shorter on mobile
       const name = d.data.name;
       const width = d.x1 - d.x0;
-      if (width < 100) {
+      if (isMobile.value && width < 80) {
+        return name.substring(0, 8) + (name.length > 8 ? '...' : '');
+      } else if (width < 100) {
         return name.substring(0, 12) + (name.length > 12 ? '...' : '');
       }
       return name;
@@ -444,18 +656,20 @@ function createTreemap() {
       // Only add size labels to even larger rectangles
       const width = d.x1 - d.x0;
       const height = d.y1 - d.y0;
-      return width > 60 && height > 30;
+      return isMobile.value ? (width > 60 && height > 30) : (width > 60 && height > 30);
     })
     .append('tspan')
     .attr('x', 4)
     .attr('y', 26)
     .attr('fill', 'rgba(255, 255, 255, 0.9)') // More visible
-    .attr('font-size', '9px') // Slightly larger
+    .attr('font-size', isMobile.value ? '8px' : '9px') // Smaller font on mobile
     .text(d => formatFileSize(d.data.size));
 
-  // Add a legend with filtering functionality
+  // Add a legend with filtering functionality - position differently on mobile
   const legend = svg.append('g')
-    .attr('transform', `translate(${width - 150}, 20)`)
+    .attr('transform', isMobile.value
+      ? `translate(10, ${height - 180})` // Bottom left on mobile - positioned for thumb reach and away from filter button
+      : `translate(${width - 150}, 20)`) // Top right on desktop
 
   const types = ['archive', 'document', 'image', 'video', 'audio', 'other']
 
@@ -465,55 +679,85 @@ function createTreemap() {
     typeCounts[type] = filteredFiles.filter(file => getFileType(file) === type).length;
   });
 
-  // Add a "Show All" option at the top
+  // Make legend background semi-transparent on mobile with backdrop blur for better visibility
+  if (isMobile.value) {
+    legend.append('rect')
+      .attr('x', -8)
+      .attr('y', -15)
+      .attr('width', 140)
+      .attr('height', 160)
+      .attr('fill', 'rgba(17, 24, 39, 0.85)')
+      .attr('rx', 8)
+      .style('backdrop-filter', 'blur(5px)')
+      .style('filter', 'drop-shadow(0 4px 6px rgba(0, 0, 0, 0.3))');
+  }
+
+  // Add a "Show All" option at the top - with larger touch target on mobile
   const allGroup = legend.append('g')
     .attr('transform', 'translate(0, 0)')
     .style('cursor', 'pointer')
     .on('click', () => {
+      if (isMobile.value && 'vibrate' in navigator) {
+        navigator.vibrate(40); // haptic feedback
+      }
       activeFilter.value = null;
+      if (filters) filters.fileType = null;
       createTreemap();
     });
 
   allGroup.append('rect')
-    .attr('width', 12)
-    .attr('height', 12)
+    .attr('width', isMobile.value ? 16 : 12)
+    .attr('height', isMobile.value ? 16 : 12)
     .attr('fill', '#ffffff')
-    .attr('rx', 2);
+    .attr('rx', isMobile.value ? 3 : 2);
 
   allGroup.append('text')
-    .attr('x', 20)
-    .attr('y', 10)
+    .attr('x', isMobile.value ? 24 : 20)
+    .attr('y', isMobile.value ? 12 : 10)
     .attr('fill', activeFilter.value === null ? '#3b82f6' : 'white')
-    .attr('font-size', '10px')
+    .attr('font-size', isMobile.value ? '11px' : '10px') // Larger on mobile for readability
     .attr('font-weight', activeFilter.value === null ? 'bold' : 'normal')
     .text(`Show All (${formatNumber(filteredFiles.length)})`);
 
-  // Add type filters
+  // Add type filters with larger touch targets on mobile
   types.forEach((type, i) => {
     // Skip types with no files
     if (typeCounts[type] === 0) return;
 
     const g = legend.append('g')
-      .attr('transform', `translate(0, ${(i + 1) * 20})`)
+      .attr('transform', `translate(0, ${(i + 1) * (isMobile.value ? 24 : 20)})`) // Larger spacing on mobile
       .style('cursor', 'pointer')
       .on('click', () => {
+        if (isMobile.value && 'vibrate' in navigator) {
+          navigator.vibrate(40); // haptic feedback
+        }
         activeFilter.value = activeFilter.value === type ? null : type;
+        if (filters) filters.fileType = activeFilter.value;
         createTreemap();
       });
 
     g.append('rect')
-      .attr('width', 12)
-      .attr('height', 12)
+      .attr('width', isMobile.value ? 16 : 12)
+      .attr('height', isMobile.value ? 16 : 12)
       .attr('fill', typeColorScale(type))
-      .attr('rx', 2);
+      .attr('rx', isMobile.value ? 3 : 2);
 
     g.append('text')
-      .attr('x', 20)
-      .attr('y', 10)
+      .attr('x', isMobile.value ? 24 : 20)
+      .attr('y', isMobile.value ? 12 : 10)
       .attr('fill', activeFilter.value === type ? '#3b82f6' : 'white')
-      .attr('font-size', '10px')
+      .attr('font-size', isMobile.value ? '11px' : '10px') // Larger on mobile
       .attr('font-weight', activeFilter.value === type ? 'bold' : 'normal')
       .text(`${type.charAt(0).toUpperCase() + type.slice(1)} (${formatNumber(typeCounts[type])})`);
+
+    // For mobile: add invisible touch target rectangle to increase tap area
+    if (isMobile.value) {
+      g.append('rect')
+        .attr('width', 140)
+        .attr('height', 22)
+        .attr('fill', 'transparent')
+        .attr('transform', 'translate(-8, -10)');
+    }
   });
 }
 
@@ -524,22 +768,16 @@ function handleResize() {
   }
 }
 
-// Function to clear the active filter
-function clearFilter() {
-  activeFilter.value = null;
-  createTreemap();
+function checkMobile() {
+  isMobile.value = window.innerWidth < 640
 }
-
-// Watch for changes to the local base path and recreate the treemap
-// to update cursor styles and click handlers
-watch(localBasePath, () => {
-  if (treemapContainer.value) {
-    createTreemap();
-  }
-});
 
 onMounted(async () => {
   try {
+    // Check if we're on mobile
+    checkMobile()
+    window.addEventListener('resize', checkMobile)
+
     console.log('Loading telegram files data...')
 
     const result = await loadTelegramFiles()
@@ -576,6 +814,22 @@ onMounted(async () => {
 
     loading.value = false
 
+    // Parse URL parameters for filter permalinks
+    const urlParams = new URLSearchParams(window.location.search)
+    if (urlParams.has('type')) {
+      activeFilter.value = urlParams.get('type')
+      filters.fileType = urlParams.get('type')
+    }
+    if (urlParams.has('search')) {
+      filters.searchTerm = urlParams.get('search')
+    }
+    if (urlParams.has('minSize')) {
+      filters.sizeRange.min = parseInt(urlParams.get('minSize')) || 0
+    }
+    if (urlParams.has('maxSize')) {
+      filters.sizeRange.max = parseInt(urlParams.get('maxSize')) || Infinity
+    }
+
     // Create treemap after data is loaded and DOM is updated
     setTimeout(() => {
       createTreemap()
@@ -590,6 +844,7 @@ onMounted(async () => {
 
 onUnmounted(() => {
   window.removeEventListener('resize', handleResize)
+  window.removeEventListener('resize', checkMobile)
 })
 </script>
 
@@ -600,5 +855,26 @@ onUnmounted(() => {
   word-break: break-word;
   overflow-wrap: break-word;
   transition: all 0.1s ease;
+  padding: 0.5rem;
+  background-color: rgba(17, 24, 39, 0.95);
+  border-left: 2px solid #3b82f6;
+}
+
+/* Enhanced mobile tooltip */
+.mobile-tooltip {
+  backdrop-filter: blur(4px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+  padding: 0.75rem;
+  border-radius: 0.5rem;
+  border-left: none;
+  border: 1px solid rgba(59, 130, 246, 0.3);
+  background-color: rgba(17, 24, 39, 0.9);
+}
+
+@media (max-width: 640px) {
+  .tooltip-box {
+    max-width: 220px;
+    font-size: 0.65rem;
+  }
 }
 </style>
