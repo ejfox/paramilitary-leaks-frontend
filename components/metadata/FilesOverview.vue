@@ -3,19 +3,20 @@
     <div v-if="loading" class="flex items-center justify-center py-6">
       <div class="flex items-center">
         <div class="animate-spin mr-3">
-          <svg class="w-5 h-5 text-blue-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+          <svg class="w-5 h-5 text-blue-600 dark:text-blue-500" xmlns="http://www.w3.org/2000/svg" fill="none"
+            viewBox="0 0 24 24">
             <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
             <path class="opacity-75" fill="currentColor"
               d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z">
             </path>
           </svg>
         </div>
-        <div class="text-white text-sm">Loading files data...</div>
+        <div class="text-gray-900 dark:text-white text-sm">Loading files data...</div>
       </div>
     </div>
 
-    <div v-else-if="error" class="text-red-400 py-4">
-      <p class="text-red-300 font-medium mb-1">Error Loading Files</p>
+    <div v-else-if="error" class="text-red-600 dark:text-red-400 py-4">
+      <p class="text-red-700 dark:text-red-300 font-medium mb-1">Error Loading Files</p>
       <p>{{ error }}</p>
     </div>
 
@@ -23,25 +24,25 @@
       <!-- Overview Stats in a clean grid layout -->
       <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 sm:gap-6 mb-6">
         <div class="flex flex-col">
-          <div class="text-gray-400 text-sm mb-1">Total Files</div>
-          <div class="text-white text-xl font-light">{{ formatNumber(totalFiles) }}</div>
+          <div class="text-gray-600 dark:text-gray-400 text-sm mb-1">Total Files</div>
+          <div class="text-gray-900 dark:text-white text-xl font-light">{{ formatNumber(totalFiles) }}</div>
         </div>
 
         <div class="flex flex-col">
-          <div class="text-gray-400 text-sm mb-1">Total Size</div>
-          <div class="text-white text-xl font-light">{{ formatFileSize(totalSize) }}</div>
+          <div class="text-gray-600 dark:text-gray-400 text-sm mb-1">Total Size</div>
+          <div class="text-gray-900 dark:text-white text-xl font-light">{{ formatFileSize(totalSize) }}</div>
         </div>
 
         <div class="flex flex-col">
-          <div class="text-gray-400 text-sm mb-1">Largest Type</div>
-          <div class="text-white text-xl font-light capitalize">
+          <div class="text-gray-600 dark:text-gray-400 text-sm mb-1">Largest Type</div>
+          <div class="text-gray-900 dark:text-white text-xl font-light capitalize">
             {{ largestType }}
           </div>
         </div>
 
         <div class="flex flex-col">
-          <div class="text-gray-400 text-sm mb-1">Avg. File Size</div>
-          <div class="text-white text-xl font-light">
+          <div class="text-gray-600 dark:text-gray-400 text-sm mb-1">Avg. File Size</div>
+          <div class="text-gray-900 dark:text-white text-xl font-light">
             {{ totalFiles > 0 ? formatFileSize(totalSize / totalFiles) : '0 B' }}
           </div>
         </div>
@@ -55,18 +56,19 @@
         <!-- Type Distribution Legend -->
         <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-4">
           <div v-for="(info, type) in fileTypeInfo" :key="type"
-            class="flex flex-col gap-1 p-2 rounded transition-colors" :class="{ 'bg-gray-800': hoveredType === type }"
+            class="flex flex-col gap-1 p-2 rounded transition-colors"
+            :class="{ 'bg-gray-100 dark:bg-gray-800': hoveredType === type }"
             :style="hoveredType === type ? { borderLeft: `2px solid ${getTypeColor(type)}` } : {}"
             @mouseover="hoveredType = type" @mouseout="hoveredType = null">
             <div class="flex items-center">
               <div class="w-3 h-3 rounded-full mr-2" :style="{ backgroundColor: getTypeColor(type) }"></div>
-              <div class="text-white text-sm capitalize">{{ type }}</div>
+              <div class="text-gray-900 dark:text-white text-sm capitalize">{{ type }}</div>
             </div>
             <div class="grid grid-cols-2 text-xs pl-5">
-              <div class="text-gray-400">Count:</div>
-              <div class="text-white font-medium">{{ formatNumber(info.count) }}</div>
-              <div class="text-gray-400">Size:</div>
-              <div class="text-white font-medium">{{ formatFileSize(info.size) }}</div>
+              <div class="text-gray-600 dark:text-gray-400">Count:</div>
+              <div class="text-gray-900 dark:text-white font-medium">{{ formatNumber(info.count) }}</div>
+              <div class="text-gray-600 dark:text-gray-400">Size:</div>
+              <div class="text-gray-900 dark:text-white font-medium">{{ formatFileSize(info.size) }}</div>
             </div>
           </div>
         </div>
@@ -75,7 +77,7 @@
       <!-- Toggle Button -->
       <div class="flex justify-center mt-4">
         <button @click="sizeMetric = sizeMetric === 'count' ? 'size' : 'count'"
-          class="text-sm text-blue-400 hover:text-blue-300 px-2 py-1 rounded flex items-center">
+          class="text-sm text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 px-2 py-1 rounded flex items-center">
           <span>Show by {{ sizeMetric === 'count' ? 'Size' : 'Count' }}</span>
           <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 ml-1" viewBox="0 0 20 20" fill="currentColor">
             <path
@@ -249,58 +251,52 @@ function createFileBlocks() {
     .style('cursor', 'pointer')
     .on('mouseover', function (event, d) {
       hoveredType.value = d.data.type
-      d3.select(this).select('rect')
-        .transition()
-        .duration(150)
-        .attr('opacity', 1)
+      d3.select(this).select('rect').attr('stroke-width', 3)
+
+      // Update all rectangles opacity
+      leaf.select('rect')
+        .attr('fill-opacity', dd => dd.data.type === d.data.type ? 1 : 0.3)
     })
     .on('mouseout', function () {
       hoveredType.value = null
-      d3.select(this).select('rect')
-        .transition()
-        .duration(150)
-        .attr('opacity', 0.8)
+      d3.select(this).select('rect').attr('stroke-width', 1)
+
+      // Reset rectangles opacity
+      leaf.select('rect').attr('fill-opacity', 0.8)
     })
 
-  // Add rectangles for each file type
+  // Add rectangles
   leaf.append('rect')
     .attr('width', d => d.x1 - d.x0)
     .attr('height', d => d.y1 - d.y0)
-    .attr('fill', d => typeColorScale(d.data.type))
-    .attr('rx', 3) // Rounded corners
-    .attr('stroke-width', 0) // Remove strokes
-    .attr('opacity', 0.8)
+    .attr('fill', d => getTypeColor(d.data.type))
+    .attr('fill-opacity', 0.8)
+    .attr('stroke', 'var(--chart-stroke-color, #ffffff)')
+    .attr('stroke-width', 1)
+    .attr('rx', 2)
 
-  // Add text labels for file types
-  leaf.append('text')
-    .attr('x', d => (d.x1 - d.x0) / 2)
-    .attr('y', d => (d.y1 - d.y0) / 2)
-    .attr('text-anchor', 'middle')
-    .attr('dominant-baseline', 'middle')
-    .attr('fill', 'white')
-    .attr('font-size', '12px')
-    .attr('font-weight', 'bold')
-    .text(d => d.data.type.charAt(0).toUpperCase() + d.data.type.slice(1))
-    .each(function (d) {
-      // Only show text if there's enough space
-      const textWidth = this.getComputedTextLength()
-      const boxWidth = d.x1 - d.x0
-      if (textWidth > boxWidth - 10) {
-        d3.select(this).remove()
-      }
-    })
-
-  // Add count/size labels
-  leaf.filter(d => (d.x1 - d.x0) > 60 && (d.y1 - d.y0) > 40)
+  // Add text labels for large enough blocks
+  leaf.filter(d => (d.x1 - d.x0) > 30 && (d.y1 - d.y0) > 20)
     .append('text')
-    .attr('x', d => (d.x1 - d.x0) / 2)
-    .attr('y', d => (d.y1 - d.y0) / 2 + 16)
-    .attr('text-anchor', 'middle')
-    .attr('fill', 'rgba(255, 255, 255, 0.8)')
+    .attr('x', 4)
+    .attr('y', 14)
+    .text(d => d.data.name)
     .attr('font-size', '10px')
+    .attr('fill', 'var(--chart-text-color, #374151)')
+    .attr('font-weight', 'bold')
+    .style('text-transform', 'capitalize')
+
+  // Add value label for larger blocks
+  leaf.filter(d => (d.x1 - d.x0) > 65 && (d.y1 - d.y0) > 30)
+    .append('text')
+    .attr('x', 4)
+    .attr('y', 26)
     .text(d => sizeMetric.value === 'count'
-      ? formatNumber(d.data.count)
+      ? formatNumber(d.data.count) + ' files'
       : formatFileSize(d.data.size))
+    .attr('font-size', '9px')
+    .attr('fill', 'var(--chart-text-color, #374151)')
+    .attr('opacity', 0.8)
 }
 
 // Calculate statistics from the files data
@@ -339,61 +335,92 @@ watch(sizeMetric, () => {
   createFileBlocks()
 })
 
-onMounted(async () => {
-  try {
-    console.log('Loading telegram files data for mini visualization...')
+onMounted(() => {
+  // Set up CSS variables based on color scheme
+  const updateColorScheme = () => {
+    const isDark = document.documentElement.classList.contains('dark')
+    document.documentElement.style.setProperty('--chart-text-color', isDark ? '#9CA3AF' : '#374151')
+    document.documentElement.style.setProperty('--chart-stroke-color', isDark ? '#1a1a1a' : '#ffffff')
+    document.documentElement.style.setProperty('--chart-grid-color', isDark ? '#374151' : '#e5e7eb')
+    document.documentElement.style.setProperty('--chart-label-bg', isDark ? 'rgba(17, 24, 39, 0.8)' : 'rgba(255, 255, 255, 0.8)')
+  }
 
-    const result = await loadTelegramFiles()
+  // Initial setup
+  updateColorScheme()
 
-    if (!result.success) {
-      throw new Error(result.error || 'Failed to load files data')
-    }
+  // Watch for color scheme changes
+  const observer = new MutationObserver(updateColorScheme)
+  observer.observe(document.documentElement, {
+    attributes: true,
+    attributeFilter: ['class']
+  })
 
-    console.log(`Successfully loaded ${result.data.length} files for mini visualization`)
-
-    // Simple processing of the data
-    filesData.value = result.data.map(file => {
-      // Extract extension from filename if not provided
-      let extension = file.extension || '';
-      if (!extension && file.filename) {
-        const parts = file.filename.split('.');
-        if (parts.length > 1) {
-          extension = parts[parts.length - 1].toLowerCase();
-        }
+  loadTelegramFiles()
+    .then(result => {
+      if (!result.success) {
+        throw new Error(result.error || 'Failed to load files data')
       }
 
-      const type = getFileType({
-        mime_type: file.mime_type || '',
-        extension: extension
+      console.log(`Successfully loaded ${result.data.length} files for mini visualization`)
+
+      // Simple processing of the data
+      filesData.value = result.data.map(file => {
+        // Extract extension from filename if not provided
+        let extension = file.extension || '';
+        if (!extension && file.filename) {
+          const parts = file.filename.split('.');
+          if (parts.length > 1) {
+            extension = parts[parts.length - 1].toLowerCase();
+          }
+        }
+
+        const type = getFileType({
+          mime_type: file.mime_type || '',
+          extension: extension
+        })
+
+        return {
+          filename: file.filename || '',
+          size: parseInt(file.size) || 10240, // Default to 10KB if no size
+          mime_type: file.mime_type || '',
+          extension: extension,
+          date: file.date || file.timestamp || null,
+          type: type
+        }
       })
 
-      return {
-        filename: file.filename || '',
-        size: parseInt(file.size) || 10240, // Default to 10KB if no size
-        mime_type: file.mime_type || '',
-        extension: extension,
-        date: file.date || file.timestamp || null,
-        type: type
-      }
+      loading.value = false
+      calculateStats()
+
+      // Create visualization after data is loaded and DOM is updated
+      setTimeout(() => {
+        createFileBlocks()
+      }, 0)
     })
-
-    loading.value = false
-    calculateStats()
-
-    // Create visualization after data is loaded and DOM is updated
-    setTimeout(() => {
-      createFileBlocks()
-    }, 0)
-  } catch (err) {
-    console.error('Error loading files data for mini visualization:', err)
-    error.value = err.message
-    loading.value = false
-  }
+    .catch(err => {
+      console.error('Error loading files data for mini visualization:', err)
+      error.value = err.message
+      loading.value = false
+    })
 })
 </script>
 
-<style scoped>
-.file-type-block:hover text {
-  font-weight: bold;
+<style>
+:root {
+  --chart-text-color: #374151;
+  --chart-stroke-color: #ffffff;
+  --chart-grid-color: #e5e7eb;
+  --chart-label-bg: rgba(255, 255, 255, 0.8);
+}
+
+:root.dark {
+  --chart-text-color: #9CA3AF;
+  --chart-stroke-color: #1a1a1a;
+  --chart-grid-color: #374151;
+  --chart-label-bg: rgba(17, 24, 39, 0.8);
+}
+
+.file-type-block text {
+  pointer-events: none;
 }
 </style>

@@ -58,7 +58,7 @@
                     :style="{ backgroundColor: getSenderColor(getPointSender(hoveredPoint || selectedPoint)) }">
                   </div>
                   <div class="text-white text-base font-bold truncate">{{ getPointSender(hoveredPoint || selectedPoint)
-                  }}
+                    }}
                   </div>
                 </div>
                 <div class="flex items-center">
@@ -176,6 +176,17 @@
             <div class="text-white">Loading data...</div>
           </div>
         </div>
+
+        <!-- Visualization Loading Progress -->
+        <div v-if="!loading && visualizationStreaming"
+          class="absolute inset-0 flex items-center justify-center z-20 bg-gray-900/50">
+          <div class="max-w-md w-full mx-4">
+            <VisualizationLoading :processed-points="streamingProgress.processed"
+              :total-points="streamingProgress.total" :start-time="streamingProgress.startTime"
+              :status-message="streamingProgress.message || 'Processing visualization data...'"
+              @cancel="cancelStreamingPoints" />
+          </div>
+        </div>
         <div v-if="error" class="text-red-500 p-4">{{ error }}</div>
 
         <!-- Search status bar -->
@@ -214,6 +225,25 @@
               </svg>
             </div>
             <div class="text-white">Searching...</div>
+          </div>
+        </div>
+
+        <!-- Error display -->
+        <div v-if="error && !loading" class="absolute top-4 right-4 left-4 z-30">
+          <div class="bg-red-900 text-white px-4 py-3 rounded-lg shadow-lg flex items-center">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 mr-2" fill="none" viewBox="0 0 24 24"
+              stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+            </svg>
+            <div class="flex-1">{{ error }}</div>
+            <button @click="error = null" class="ml-3 text-white hover:text-gray-300">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                <path fill-rule="evenodd"
+                  d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"
+                  clip-rule="evenodd" />
+              </svg>
+            </button>
           </div>
         </div>
 
@@ -318,6 +348,7 @@
 
 <script setup>
 import { ref, reactive, onMounted, computed, watch, nextTick, onUnmounted } from 'vue'
+import VisualizationLoading from '~/components/VisualizationLoading.vue'
 import { useVisualization } from '~/composables/useVisualization'
 import { useParquetLoader } from '~/composables/useParquetLoader'
 import { useFuzzySearch } from '~/composables/useFuzzySearch'
@@ -337,6 +368,13 @@ const parquetBuffer = ref(null)
 const highlightedSender = ref(null)
 const activeView = ref('time')
 const searchLoading = ref(false)
+const visualizationStreaming = ref(false)
+const streamingProgress = reactive({
+  processed: 0,
+  total: 0,
+  startTime: 0,
+  message: ''
+})
 
 const appStore = useAppStore()
 const colorMap = useColorMap()
@@ -352,10 +390,12 @@ const {
   selectedPoints,
   hoveredPoint,
   clearSelectedPoint,
-  resizeVisualization
+  resizeVisualization,
+  cancelStreamingPoints,
+  streamingStatus
 } = useVisualization()
 
-const { loadParquetFile } = useParquetLoader()
+const { loadParquetFile, resetDuckDB } = useParquetLoader()
 
 // Stats for the sidebar
 const stats = reactive({
@@ -488,7 +528,7 @@ function calculateStats(data) {
     .sort((a, b) => b.count - a.count)
 }
 
-// Apply global filters from the store
+// Apply global filters from the store - with improved searching
 async function applyGlobalFilters() {
   if (!rawData.value.length) return
 
@@ -498,85 +538,53 @@ async function applyGlobalFilters() {
   try {
     // Get filters from the store
     const filters = appStore.filters
+    const searchTerm = filters.searchTerm?.trim().toLowerCase() // Normalize search term
 
-    // If we have a search term, use DuckDB for efficient searching directly on parquet
-    if (filters.searchTerm && filters.searchTerm.trim() !== '' && parquetBuffer.value) {
-      console.log('Searching parquet with term:', filters.searchTerm);
+    // Always try DuckDB first for all filtering operations
+    if (parquetBuffer.value) {
+      console.log('Using DuckDB for filtering with params:', {
+        searchTerm,
+        startDate: filters.startDate,
+        endDate: filters.endDate,
+        sender: filters.sender,
+        chat: filters.chat
+      });
 
       try {
-        // Use the improved DuckDB searchParquet function which handles all filtering
-        const searchResults = await searchParquet(parquetBuffer.value, filters.searchTerm, {
+        // Use the DuckDB search function - even if no search term
+        const searchResults = await searchParquet(parquetBuffer.value, searchTerm, {
           startDate: filters.startDate,
           endDate: filters.endDate,
           sender: filters.sender,
           chat: filters.chat
         });
 
-        console.log(`DuckDB search returned ${searchResults.length} results out of ${rawData.value.length} total messages`);
+        console.log(`DuckDB query returned ${searchResults.length} results`);
 
-        if (searchResults.length > 0 || searchError.value === null) {
+        if (searchResults.length > 0) {
           filteredData.value = searchResults;
         } else {
-          console.log('DuckDB search failed, falling back to in-memory search');
+          // Only if DuckDB returns empty results or has issues, try in-memory
+          console.log('No DuckDB results, falling back to in-memory filtering');
           performInMemoryFiltering(filters);
         }
       } catch (err) {
-        console.error('DuckDB search failed:', err);
-        console.log('Falling back to in-memory search');
+        console.error('DuckDB query failed:', err);
+        // Log the full error details for debugging
+        error.value = `Search failed: ${err.message}`;
+        // Fallback to in-memory filtering if DuckDB fails
         performInMemoryFiltering(filters);
       }
     } else {
-      // No search term or no parquet buffer, just apply basic filters in memory
+      // No parquet buffer available, use in-memory filtering
+      console.log('No parquet buffer available, using in-memory filtering');
       performInMemoryFiltering(filters);
     }
 
-    // Update stats
+    // Update stats and visualization
     calculateStats(filteredData.value);
+    updateVisualization();
 
-    // Create a better mapping between filtered data and visualization points
-    if (activeView.value === 'time') {
-      if (filteredData.value.length < rawData.value.length) {
-        console.log('Updating visualization with filtered points');
-
-        // Better way to find matching indices - using a set of unique identifiers
-        const filteredKeys = new Set();
-        filteredData.value.forEach(item => {
-          // Create a unique key for each message combining timestamp and sender
-          const timestamp = getPointTimestamp(item);
-          const sender = getPointSender(item);
-          if (timestamp && sender) {
-            filteredKeys.add(`${timestamp}|${sender}`);
-          }
-        });
-
-        // Find matching indices in raw data
-        const filteredIndices = [];
-        rawData.value.forEach((item, index) => {
-          const timestamp = getPointTimestamp(item);
-          const sender = getPointSender(item);
-          if (timestamp && sender) {
-            const key = `${timestamp}|${sender}`;
-            if (filteredKeys.has(key)) {
-              filteredIndices.push(index);
-            }
-          }
-        });
-
-        console.log(`Found ${filteredIndices.length} matching points in visualization`);
-
-        if (filteredIndices.length > 0) {
-          // Pass isTextSearch: true when we're filtering by text search term
-          filterPointsWithoutMoving(filteredIndices, !!filters.searchTerm);
-        } else {
-          // If no points match the filter, just clear selection
-          clearSelectedPoint();
-        }
-      } else {
-        // If no filters are active, reset to show all points
-        console.log('Resetting visualization to show all points');
-        resetView();
-      }
-    }
   } catch (err) {
     console.error('Error applying filters:', err);
     error.value = err.message;
@@ -586,49 +594,99 @@ async function applyGlobalFilters() {
   }
 }
 
-// Helper function to perform in-memory filtering
+// Improve the in-memory filtering function
 function performInMemoryFiltering(filters) {
   console.log('Performing in-memory filtering');
   let filtered = [...rawData.value];
 
-  // Apply date filters
-  if (filters.startDate) {
-    const startDate = new Date(filters.startDate)
+  // Apply text search if needed - search all content fields
+  if (filters.searchTerm?.trim()) {
+    const searchTerm = filters.searchTerm.trim().toLowerCase();
     filtered = filtered.filter(msg => {
-      const timestamp = new Date(getPointTimestamp(msg))
-      return timestamp >= startDate
-    })
+      if (!msg) return false;
+
+      // Exhaustive check of all possible content-related fields
+      const checkField = (fieldName) => {
+        if (!msg[fieldName]) return false;
+        const fieldValue = String(msg[fieldName]).toLowerCase();
+        return fieldValue.includes(searchTerm);
+      };
+
+      // Check standard content fields
+      if (checkField('message')) return true;
+      if (checkField('text')) return true;
+      if (checkField('content')) return true;
+      if (checkField('body')) return true;
+      if (checkField('msg')) return true;
+      if (checkField('data')) return true;
+
+      // Also check using our helper function
+      const content = getPointContent(msg)?.toLowerCase() || '';
+      if (content.includes(searchTerm)) return true;
+
+      // Check for any field with a value containing the search term
+      // This is more expensive but ensures we find matches in any field
+      for (const key in msg) {
+        if (msg[key] && typeof msg[key] === 'string') {
+          if (msg[key].toLowerCase().includes(searchTerm)) {
+            return true;
+          }
+        }
+      }
+
+      return false;
+    });
+    console.log(`Found ${filtered.length} messages containing "${searchTerm}"`);
+  }
+
+  // Apply other filters...
+  if (filters.startDate) {
+    const startDate = new Date(filters.startDate);
+    filtered = filtered.filter(msg => new Date(getPointTimestamp(msg)) >= startDate);
   }
 
   if (filters.endDate) {
-    const endDate = new Date(filters.endDate)
-    filtered = filtered.filter(msg => {
-      const timestamp = new Date(getPointTimestamp(msg))
-      return timestamp <= endDate
-    })
+    const endDate = new Date(filters.endDate);
+    filtered = filtered.filter(msg => new Date(getPointTimestamp(msg)) <= endDate);
   }
 
-  // Apply sender filter
   if (filters.sender) {
-    filtered = filtered.filter(msg => getPointSender(msg) === filters.sender)
+    filtered = filtered.filter(msg => getPointSender(msg) === filters.sender);
   }
 
-  // Apply chat filter
   if (filters.chat) {
-    filtered = filtered.filter(msg => getPointChatName(msg) === filters.chat)
-  }
-
-  // Apply text search if needed
-  if (filters.searchTerm && filters.searchTerm.trim() !== '') {
-    const searchTerm = filters.searchTerm.toLowerCase();
-    filtered = filtered.filter(msg => {
-      const content = getPointContent(msg);
-      return content && content.toLowerCase().includes(searchTerm);
-    });
+    filtered = filtered.filter(msg => getPointChatName(msg) === filters.chat);
   }
 
   filteredData.value = filtered;
-  console.log(`In-memory filtering returned ${filtered.length} results`);
+  console.log(`Filtering returned ${filtered.length} results`);
+}
+
+// Add this helper function to update the visualization
+function updateVisualization() {
+  if (filteredData.value.length < rawData.value.length) {
+    // Create a map of filtered messages for faster lookup
+    const filteredMap = new Set(
+      filteredData.value.map(msg =>
+        `${getPointTimestamp(msg)}|${getPointSender(msg)}`
+      )
+    );
+
+    // Find indices of filtered messages in raw data
+    const indices = rawData.value.reduce((acc, msg, idx) => {
+      const key = `${getPointTimestamp(msg)}|${getPointSender(msg)}`;
+      if (filteredMap.has(key)) acc.push(idx);
+      return acc;
+    }, []);
+
+    if (indices.length > 0) {
+      filterPointsWithoutMoving(indices, true);
+    } else {
+      clearSelectedPoint();
+    }
+  } else {
+    resetView();
+  }
 }
 
 // Helper to check if any filters are active
@@ -744,12 +802,33 @@ function getPointContent(point) {
     return contentCache.get(point);
   }
 
-  // Calculate content
+  // Calculate content - be explicit about which fields we check
   let content = null;
-  if (isNewFormat(point)) {
-    content = point.message || point.text || null;
-  } else {
-    content = point.content || point.text || null;
+
+  // Try all possible content fields directly
+  if (point.message) content = point.message;
+  else if (point.text) content = point.text;
+  else if (point.content) content = point.content;
+  else if (point.body) content = point.body;
+  else if (point.msg) content = point.msg;
+  else if (point.data) content = point.data;
+
+  // If we still don't have content, check for any string field that might contain content
+  if (!content && point) {
+    // Look for any property that looks like it might contain text content
+    for (const key in point) {
+      if (point[key] && typeof point[key] === 'string' &&
+        point[key].length > 5 && // Skip very short values like IDs
+        !['id', 'timestamp', 'date', 'from', 'sender', 'chat_title', 'group_chat_id', 'chat_name'].includes(key)) {
+        content = point[key];
+        break;
+      }
+    }
+
+    // Only log a small sample of issues to avoid console spam
+    if (!content && Math.random() < 0.0001) { // Only log 0.01% of issues
+      console.debug('Sample of data with no content found:', JSON.stringify(point).slice(0, 200));
+    }
   }
 
   // Cache the result
@@ -817,15 +896,65 @@ function handleResize() {
 onMounted(async () => {
   try {
     console.log('Loading parquet data from R2...')
+    loading.value = true
 
-    const result = await loadParquetFile()
+    // Initialize the visualization first so it's ready when data arrives
+    initScatterplot()
 
-    if (!result.success) {
-      throw new Error(result.error || 'Failed to load data from R2')
+    // First try to reset DuckDB to clear any existing tables/connections
+    try {
+      console.log('Performing DuckDB reset before data load')
+      await resetDuckDB()
+    } catch (resetErr) {
+      console.warn('DuckDB reset failed, continuing anyway:', resetErr)
+      // Continue anyway, the load may still succeed
+    }
+
+    // Load data with proper error handling
+    let result
+    try {
+      result = await loadParquetFile()
+    } catch (loadErr) {
+      console.error('Error loading parquet data:', loadErr)
+
+      // If first attempt fails, try a reset and retry
+      console.log('First attempt failed, trying reset + retry')
+      try {
+        await resetDuckDB()
+        // Wait a bit longer after reset
+        await new Promise(resolve => setTimeout(resolve, 1000))
+        // Try loading again
+        result = await loadParquetFile()
+        console.log('Retry successful after reset')
+      } catch (retryErr) {
+        console.error('Retry also failed:', retryErr)
+        error.value = retryErr.message || 'Failed to load data even after reset'
+        loading.value = false
+        return
+      }
+    }
+
+    if (!result || !result.success) {
+      const errorMsg = (result && result.error) || 'Failed to load data from R2'
+      throw new Error(errorMsg)
+    }
+
+    if (!result.data || !Array.isArray(result.data) || result.data.length === 0) {
+      throw new Error('Loaded data is empty or invalid')
+    }
+
+    // Log a sample of the data to help diagnose format issues
+    console.log(`Successfully loaded ${result.data.length} rows from R2`)
+    console.log('First data point sample:', result.data[0])
+
+    // Validate the data has required fields
+    const samplePoint = result.data[0]
+    const hasTimestamp = samplePoint.timestamp || samplePoint.date
+    if (!hasTimestamp) {
+      console.warn('Data appears to be missing timestamp/date fields:', samplePoint)
     }
 
     // Store the raw data
-    console.log(`Successfully loaded ${result.data.length} rows from R2`)
     rawData.value = result.data
     filteredData.value = result.data
 
@@ -836,28 +965,104 @@ onMounted(async () => {
     }
 
     // Initialize the color map with all data
-    colorMap.initialize(result.data, getPointSender)
-
-    calculateStats(result.data)
-
-    // Set default date range based on the data
-    if (result.data.length > 0) {
-      const timestamps = result.data.map(m => new Date(getPointTimestamp(m)))
-      const [minDate, maxDate] = d3.extent(timestamps)
-
-      // Format dates as YYYY-MM-DD for the date inputs
-      const formatDateForInput = d3.timeFormat('%Y-%m-%d')
-      appStore.setDateRange(formatDateForInput(minDate), formatDateForInput(maxDate))
+    try {
+      colorMap.initialize(result.data, getPointSender)
+    } catch (colorErr) {
+      console.warn('Error initializing color map:', colorErr)
+      // Continue anyway - visualization will use fallback colors
     }
 
-    initScatterplot()
+    try {
+      calculateStats(result.data)
+    } catch (statsErr) {
+      console.warn('Error calculating stats:', statsErr)
+      // Continue anyway - stats will be incomplete but won't block visualization
+    }
 
-    // Wait for the next tick to ensure the canvas is rendered
+    // Set default date range based on the data
+    try {
+      if (result.data.length > 0) {
+        // Filter out invalid timestamps first
+        const validTimestamps = result.data
+          .map(m => {
+            try {
+              return getPointTimestamp(m)
+            } catch (e) {
+              return null
+            }
+          })
+          .filter(Boolean)
+
+        if (validTimestamps.length > 0) {
+          const [minDate, maxDate] = d3.extent(validTimestamps)
+          if (minDate && maxDate) {
+            // Format dates as YYYY-MM-DD for the date inputs
+            const formatDateForInput = d3.timeFormat('%Y-%m-%d')
+            appStore.setDateRange(formatDateForInput(minDate), formatDateForInput(maxDate))
+          }
+        }
+      }
+    } catch (dateErr) {
+      console.warn('Error setting date range:', dateErr)
+      // Continue anyway - date range will use defaults
+    }
+
+    // Process data in chunks for better responsiveness with large datasets
     nextTick(() => {
-      transformData(result.data)
-    });
+      try {
+        console.log('Starting data transformation...')
 
-    loading.value = false
+        // Set up watcher for streaming status
+        const unwatchStreaming = watch(() => streamingStatus.active, (isActive) => {
+          visualizationStreaming.value = isActive
+          if (isActive) {
+            streamingProgress.processed = streamingStatus.processed
+            streamingProgress.total = streamingStatus.total
+            streamingProgress.startTime = streamingStatus.startTime
+            streamingProgress.message = streamingStatus.message
+          }
+        }, { immediate: true })
+
+        // Set up watcher for progress updates
+        const unwatchProgress = watch(() => streamingStatus.processed, (processed) => {
+          streamingProgress.processed = processed
+        })
+
+        // For large datasets, defer rendering to avoid blocking the main thread
+        if (result.data.length > 10000) {
+          console.log('Large dataset detected, deferring render...')
+          setTimeout(() => {
+            transformData(result.data)
+            loading.value = false
+
+            // Clean up watchers when all processing is complete
+            const checkComplete = watch(() => streamingStatus.active, (isActive) => {
+              if (!isActive) {
+                unwatchStreaming()
+                unwatchProgress()
+                checkComplete()
+              }
+            })
+          }, 0)
+        } else {
+          transformData(result.data)
+          loading.value = false
+
+          // Clean up watchers when all processing is complete
+          const checkComplete = watch(() => streamingStatus.active, (isActive) => {
+            if (!isActive) {
+              unwatchStreaming()
+              unwatchProgress()
+              checkComplete()
+            }
+          })
+        }
+      } catch (transformErr) {
+        console.error('Error transforming data:', transformErr)
+        error.value = 'Error preparing visualization: ' + transformErr.message
+        loading.value = false
+      }
+    });
 
     // Add window resize listener
     window.addEventListener('resize', handleResize);

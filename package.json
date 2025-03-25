@@ -11,12 +11,13 @@
     "prettier": "prettier {*.*,**/*.*} --single-quote --write",
     "lint": "eslint --ext .js,.vue,.ts --ignore-path .gitignore --fix .",
     "verify-parquet": "node scripts/verify-parquet.js",
-    "changelog": "auto-changelog --template keepachangelog --commit-limit false --output CHANGELOG.md",
+    "changelog": "auto-changelog --template keepachangelog --commit-limit false --output CHANGELOG.md --package --breaking-pattern 'BREAKING CHANGE:'",
     "version": "npm run changelog && git add CHANGELOG.md"
   },
   "devDependencies": {
     "@iconify/vue": "^4.3.0",
     "@nuxt/devtools": "^1.0.0",
+    "@nuxtjs/color-mode": "^3.5.2",
     "@types/node": "^18.17.1",
     "auto-changelog": "^2.5.0",
     "nuxt": "^3.15.1"

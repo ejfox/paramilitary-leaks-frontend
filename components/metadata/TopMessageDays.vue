@@ -70,85 +70,173 @@ async function getTopMessageDays() {
     loading.value = true
     error.value = null
 
-    console.log(`Processing ${props.rawData.length} messages to find top days...`)
+    // For large datasets, use a more efficient approach
+    if (props.rawData.length > 10000) {
+      console.log(`Large dataset (${props.rawData.length} messages) - using optimized approach`)
 
-    // Group messages by day
-    const messagesByDay = {}
+      // Take a sample of messages to speed up processing
+      const sampleSize = Math.min(10000, props.rawData.length)
+      const sampleInterval = Math.floor(props.rawData.length / sampleSize)
+      const sampledData = []
 
-    props.rawData.forEach(msg => {
-      // Extract date part (YYYY-MM-DD) from timestamp
-      const timestamp = msg.timestamp
-      if (!timestamp) return
+      for (let i = 0; i < props.rawData.length; i += sampleInterval) {
+        sampledData.push(props.rawData[i])
+      }
 
-      let dateStr
-      if (typeof timestamp === 'string') {
-        // If it's a string, take first 10 chars if it looks like ISO format
-        if (timestamp.length >= 10 && timestamp.includes('-')) {
+      console.log(`Processing ${sampledData.length} sampled messages (${Math.round(sampledData.length / props.rawData.length * 100)}% of total)`)
+
+      // Use Map for faster lookups
+      const messagesByDay = new Map()
+
+      sampledData.forEach(msg => {
+        // Extract date part (YYYY-MM-DD) from timestamp
+        const timestamp = msg.date || msg.timestamp
+        if (!timestamp) return
+
+        let dateStr
+        if (typeof timestamp === 'string') {
           dateStr = timestamp.substring(0, 10)
+        } else if (typeof timestamp === 'number') {
+          dateStr = new Date(timestamp < 10000000000 ? timestamp * 1000 : timestamp)
+            .toISOString().substring(0, 10)
         } else {
-          // Try to parse as date
-          const date = new Date(timestamp)
-          if (!isNaN(date.getTime())) {
-            dateStr = date.toISOString().substring(0, 10)
-          }
+          return
         }
-      } else if (typeof timestamp === 'number') {
-        // If it's a number, convert to date
-        const date = new Date(timestamp)
-        dateStr = date.toISOString().substring(0, 10)
-      }
 
-      if (!dateStr) return
+        if (!dateStr) return
 
-      // Count messages per day
-      if (!messagesByDay[dateStr]) {
-        messagesByDay[dateStr] = {
-          date: dateStr,
-          count: 0,
-          messages: []
+        // Update counters
+        if (!messagesByDay.has(dateStr)) {
+          messagesByDay.set(dateStr, {
+            date: dateStr,
+            count: 0,
+            messages: []
+          })
         }
-      }
 
-      messagesByDay[dateStr].count++
-      messagesByDay[dateStr].messages.push(msg)
-    })
-
-    // Sort days by message count and take top 6
-    const sortedDays = Object.values(messagesByDay)
-      .sort((a, b) => b.count - a.count)
-      .slice(0, 6)
-
-    console.log(`Found ${sortedDays.length} top message days`)
-
-    // For each top day, find top senders
-    const enrichedDays = sortedDays.map(day => {
-      // Count messages by sender
-      const senderCounts = {}
-
-      day.messages.forEach(msg => {
-        const sender = msg.sender || 'Unknown'
-        senderCounts[sender] = (senderCounts[sender] || 0) + 1
+        const day = messagesByDay.get(dateStr)
+        day.count++
+        // Only store up to 100 messages per day to save memory
+        if (day.messages.length < 100) {
+          day.messages.push(msg)
+        }
       })
 
-      // Get top 3 senders
-      const topSenders = Object.entries(senderCounts)
-        .map(([name, count]) => ({ name, count }))
+      // Process the top days
+      const sortedDays = Array.from(messagesByDay.values())
         .sort((a, b) => b.count - a.count)
-        .slice(0, 3)
+        .slice(0, 6)
 
-      return {
-        date: day.date,
-        count: day.count,
-        topSenders
+      // Scale counts to account for sampling
+      if (sampleInterval > 1) {
+        const scaleFactor = props.rawData.length / sampledData.length
+        sortedDays.forEach(day => {
+          day.count = Math.round(day.count * scaleFactor)
+        })
       }
-    })
 
-    topDays.value = enrichedDays
+      // For each top day, find top senders
+      topDays.value = sortedDays.map(day => {
+        // Count messages by sender
+        const senderCounts = {}
+
+        day.messages.forEach(msg => {
+          const sender = msg.from || msg.sender || msg.sender_name || 'Unknown'
+          senderCounts[sender] = (senderCounts[sender] || 0) + 1
+        })
+
+        // Get top 3 senders
+        const topSenders = Object.entries(senderCounts)
+          .map(([name, count]) => ({ name, count }))
+          .sort((a, b) => b.count - a.count)
+          .slice(0, 3)
+
+        return {
+          date: day.date,
+          count: day.count,
+          topSenders
+        }
+      })
+    } else {
+      // For smaller datasets, use the original approach
+      console.log(`Processing ${props.rawData.length} messages to find top days...`)
+
+      // Group messages by day
+      const messagesByDay = {}
+
+      props.rawData.forEach(msg => {
+        // Extract date part (YYYY-MM-DD) from timestamp
+        const timestamp = msg.date || msg.timestamp
+        if (!timestamp) return
+
+        let dateStr
+        if (typeof timestamp === 'string') {
+          // If it's a string, take first 10 chars if it looks like ISO format
+          if (timestamp.length >= 10 && timestamp.includes('-')) {
+            dateStr = timestamp.substring(0, 10)
+          } else {
+            // Try to parse as date
+            const date = new Date(timestamp)
+            if (!isNaN(date.getTime())) {
+              dateStr = date.toISOString().substring(0, 10)
+            }
+          }
+        } else if (typeof timestamp === 'number') {
+          // If it's a number, convert to date
+          const date = new Date(timestamp < 10000000000 ? timestamp * 1000 : timestamp)
+          dateStr = date.toISOString().substring(0, 10)
+        }
+
+        if (!dateStr) return
+
+        // Count messages per day
+        if (!messagesByDay[dateStr]) {
+          messagesByDay[dateStr] = {
+            date: dateStr,
+            count: 0,
+            messages: []
+          }
+        }
+
+        messagesByDay[dateStr].count++
+        messagesByDay[dateStr].messages.push(msg)
+      })
+
+      // Sort days by message count and take top 6
+      const sortedDays = Object.values(messagesByDay)
+        .sort((a, b) => b.count - a.count)
+        .slice(0, 6)
+
+      console.log(`Found ${sortedDays.length} top message days`)
+
+      // For each top day, find top senders
+      topDays.value = sortedDays.map(day => {
+        // Count messages by sender
+        const senderCounts = {}
+
+        day.messages.forEach(msg => {
+          const sender = msg.from || msg.sender || msg.sender_name || 'Unknown'
+          senderCounts[sender] = (senderCounts[sender] || 0) + 1
+        })
+
+        // Get top 3 senders
+        const topSenders = Object.entries(senderCounts)
+          .map(([name, count]) => ({ name, count }))
+          .sort((a, b) => b.count - a.count)
+          .slice(0, 3)
+
+        return {
+          date: day.date,
+          count: day.count,
+          topSenders
+        }
+      })
+    }
+
     console.log('Processed top message days with sender info:', topDays.value)
 
     // Emit the top days to the parent component
     emit('update:top-days', topDays.value)
-
   } catch (err) {
     console.error('Error getting top message days:', err)
     error.value = err.message || 'Failed to get top message days'

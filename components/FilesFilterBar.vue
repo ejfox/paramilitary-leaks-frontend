@@ -1,9 +1,8 @@
 <template>
   <div class="w-full bg-gray-800 border-b border-gray-700 relative">
-    <!-- Toggle Button - positioned for thumb reachability on mobile -->
+    <!-- Desktop Toggle Button - only visible on desktop -->
     <button @click="isFilterVisible = !isFilterVisible"
-      class="absolute z-10 text-gray-400 hover:text-white transition-colors"
-      :class="isMobile ? 'right-3 bottom-3' : 'right-4 top-2'">
+      class="absolute right-4 top-2 hidden sm:flex text-gray-400 hover:text-white transition-colors">
       <div class="flex items-center text-xs">
         <span class="mr-1">{{ isFilterVisible ? 'Hide' : 'Show' }} Filters</span>
         <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" viewBox="0 0 20 20" fill="currentColor">
@@ -96,6 +95,38 @@
         </div>
       </div>
     </transition>
+
+    <!-- Mobile Filters Toggle - improved positioning and visibility -->
+    <div 
+      class="fixed bottom-16 right-4 sm:hidden z-50 shadow-lg"
+    >
+      <button
+        @click="isFilterVisible = !isFilterVisible"
+        class="bg-blue-600 text-white rounded-full p-3 shadow-lg flex items-center justify-center"
+        :aria-expanded="isFilterVisible ? 'true' : 'false'"
+        aria-controls="mobile-filters"
+      >
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          class="h-6 w-6"
+          :class="{ 'rotate-180': isFilterVisible }"
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke="currentColor"
+          aria-hidden="true"
+        >
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"
+          />
+        </svg>
+        <span class="sr-only">
+          {{ isFilterVisible ? 'Hide Filters' : 'Show Filters' }}
+        </span>
+      </button>
+    </div>
   </div>
 </template>
 
@@ -216,15 +247,25 @@ onMounted(() => {
 </script>
 
 <style scoped>
+/* Add padding to the bottom of the container on mobile */
+@media (max-width: 640px) {
+  .fixed.bottom-16 {
+    /* Higher z-index to ensure it's above other elements */
+    z-index: 60;
+    /* Add shadow for better visibility */
+    filter: drop-shadow(0 4px 6px rgba(0, 0, 0, 0.4));
+  }
+}
+
+/* Animation for slide transition */
 .slide-enter-active,
 .slide-leave-active {
-  transition: max-height 0.3s ease;
-  max-height: 200px;
-  overflow: hidden;
+  transition: all 0.3s ease;
 }
 
 .slide-enter-from,
 .slide-leave-to {
   max-height: 0;
+  opacity: 0;
 }
 </style> 

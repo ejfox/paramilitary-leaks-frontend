@@ -118,12 +118,68 @@ export function useAnimationUtils() {
     }
   }
 
+  // New functions for narrative scrolling animations
+
+  // Creates a parallax effect based on scroll position
+  function applyParallax(element, scrollY, factor = 0.4) {
+    if (!element) return
+
+    // Apply transform based on scroll position
+    element.style.transform = `translateY(${scrollY * factor}px)`
+  }
+
+  // Animation for fade-in elements as they enter viewport
+  function setupScrollFadeIn(elementRefs, thresholdValue = 0.2) {
+    if (!window.IntersectionObserver) return
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            // Add visible class when element enters viewport
+            entry.target.classList.add('opacity-100', 'translate-y-0')
+            entry.target.classList.remove('opacity-0', 'translate-y-10')
+
+            // Stop observing after animation is triggered
+            observer.unobserve(entry.target)
+          }
+        })
+      },
+      { threshold: thresholdValue }
+    )
+
+    // Start observing each element
+    elementRefs.forEach((el) => {
+      if (el.value) {
+        observer.observe(el.value)
+      }
+    })
+
+    return observer
+  }
+
+  // Creates a scroll-triggered animation for chart data
+  function animateChartOnScroll(chart, isActive) {
+    if (!chart || !chart.data) return
+
+    if (isActive && !chart.animated) {
+      // Animate the chart data
+      // This is a placeholder - actual implementation would depend on chart library
+      chart.animated = true
+      chart.update()
+    }
+  }
+
   return {
     animatingTransition,
     transitionProgress,
     easeInOutCubic,
     animateTransition,
     startAnimation,
-    cleanupAnimation
+    cleanupAnimation,
+    // Export the new functions
+    applyParallax,
+    setupScrollFadeIn,
+    animateChartOnScroll
   }
 }
