@@ -102,7 +102,7 @@ const props = defineProps({
   }
 })
 
-const loading = ref(true)
+const loading = ref(false)
 const error = ref(null)
 const filesData = ref([])
 const totalFiles = ref(0)
@@ -299,30 +299,42 @@ function createFileBlocks() {
     .attr('opacity', 0.8)
 }
 
-// Calculate statistics from the files data
-function calculateStats() {
-  if (!filesData.value.length) return
+// Load and process files data
+async function loadFilesData() {
+  try {
+    loading.value = true
+    const result = await loadTelegramFiles()
 
-  // Filter out .7z files for stats calculation
-  const filteredFiles = filesData.value.filter(file => {
-    return !(file.extension === '7z' || file.mime_type === 'application/x-7z-compressed')
-  })
+    if (!result.success) {
+      throw new Error(result.error || 'Failed to load files data')
+    }
 
-  totalFiles.value = filteredFiles.length
-  totalSize.value = filteredFiles.reduce((sum, file) => sum + (file.size || 0), 0)
+    filesData.value = result.data
 
-  // Count files by type
-  const typeCounts = {}
-  const typeSizes = {}
+    // Process file data
+    totalFiles.value = filesData.value.length
+    totalSize.value = filesData.value.reduce((acc, file) => acc + (file.size || 0), 0)
 
-  filteredFiles.forEach(file => {
-    const type = file.type
-    typeCounts[type] = (typeCounts[type] || 0) + 1
-    typeSizes[type] = (typeSizes[type] || 0) + (file.size || 0)
-  })
+    // Calculate type counts and sizes
+    const counts = {}
+    const sizes = {}
 
-  fileTypeCounts.value = typeCounts
-  fileTypeSizes.value = typeSizes
+    filesData.value.forEach(file => {
+      const type = getFileType(file)
+      counts[type] = (counts[type] || 0) + 1
+      sizes[type] = (sizes[type] || 0) + (file.size || 0)
+    })
+
+    fileTypeCounts.value = counts
+    fileTypeSizes.value = sizes
+
+    error.value = null
+  } catch (err) {
+    console.error('Error loading files data:', err)
+    error.value = err.message
+  } finally {
+    loading.value = false
+  }
 }
 
 // Watch for size changes using VueUse's useElementSize
@@ -335,73 +347,9 @@ watch(sizeMetric, () => {
   createFileBlocks()
 })
 
+// Initialize on mount
 onMounted(() => {
-  // Set up CSS variables based on color scheme
-  const updateColorScheme = () => {
-    const isDark = document.documentElement.classList.contains('dark')
-    document.documentElement.style.setProperty('--chart-text-color', isDark ? '#9CA3AF' : '#374151')
-    document.documentElement.style.setProperty('--chart-stroke-color', isDark ? '#1a1a1a' : '#ffffff')
-    document.documentElement.style.setProperty('--chart-grid-color', isDark ? '#374151' : '#e5e7eb')
-    document.documentElement.style.setProperty('--chart-label-bg', isDark ? 'rgba(17, 24, 39, 0.8)' : 'rgba(255, 255, 255, 0.8)')
-  }
-
-  // Initial setup
-  updateColorScheme()
-
-  // Watch for color scheme changes
-  const observer = new MutationObserver(updateColorScheme)
-  observer.observe(document.documentElement, {
-    attributes: true,
-    attributeFilter: ['class']
-  })
-
-  loadTelegramFiles()
-    .then(result => {
-      if (!result.success) {
-        throw new Error(result.error || 'Failed to load files data')
-      }
-
-      console.log(`Successfully loaded ${result.data.length} files for mini visualization`)
-
-      // Simple processing of the data
-      filesData.value = result.data.map(file => {
-        // Extract extension from filename if not provided
-        let extension = file.extension || '';
-        if (!extension && file.filename) {
-          const parts = file.filename.split('.');
-          if (parts.length > 1) {
-            extension = parts[parts.length - 1].toLowerCase();
-          }
-        }
-
-        const type = getFileType({
-          mime_type: file.mime_type || '',
-          extension: extension
-        })
-
-        return {
-          filename: file.filename || '',
-          size: parseInt(file.size) || 10240, // Default to 10KB if no size
-          mime_type: file.mime_type || '',
-          extension: extension,
-          date: file.date || file.timestamp || null,
-          type: type
-        }
-      })
-
-      loading.value = false
-      calculateStats()
-
-      // Create visualization after data is loaded and DOM is updated
-      setTimeout(() => {
-        createFileBlocks()
-      }, 0)
-    })
-    .catch(err => {
-      console.error('Error loading files data for mini visualization:', err)
-      error.value = err.message
-      loading.value = false
-    })
+  loadFilesData()
 })
 </script>
 

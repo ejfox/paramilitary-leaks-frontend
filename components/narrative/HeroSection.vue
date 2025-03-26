@@ -14,9 +14,15 @@
     <div class="absolute inset-0 flex items-center justify-center">
       <div ref="heroContent" class="text-center z-30 px-6 transform fade-up" :class="{ 'visible': contentVisible }"
         :style="{ transform: `translateY(${scrollY * 0.4}px)` }">
-        <h1 class="text-5xl sm:text-7xl font-bold mb-6 text-white">The Hidden Communications</h1>
-        <p class="text-xl sm:text-2xl text-gray-300 max-w-3xl mx-auto mb-8">
-          A journey through the secret Telegram messages that exposed a paramilitary network's inner workings
+        <h1 class="text-5xl sm:text-7xl font-bold mb-6 text-white">Looking Inside An American Militia</h1>
+        <p class="text-xl sm:text-2xl text-gray-300 mx-auto mb-8 max-w-lg">
+          Paramilitary groups around the United States gather and train, often in secret, using encrypted chats hidden
+          from public view.
+        </p>
+        <p class="text-lg text-gray-400 mx-auto mb-8 max-w-prose">
+          These leaked telegram chats and videos offer a
+          rare chance for the public to see into the inner workings and mindset of these groups and try to answer the
+          question; <br />what are they preparing for?
         </p>
         <div class="animate-bounce mt-16">
           <svg class="w-6 h-6 mx-auto text-gray-400" fill="none" stroke-linecap="round" stroke-linejoin="round"

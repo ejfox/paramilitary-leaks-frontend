@@ -432,21 +432,16 @@ function prevPage() {
 
 // Filter methods
 function applyFilters() {
-  console.log(`Applying filters: sender=${filters.sender}, startDate=${filters.startDate}, endDate=${filters.endDate}`)
-
   let filtered = [...rawData.value]
-  console.log(`Starting with ${filtered.length} messages`)
 
   // Apply sender filter
   if (filters.sender) {
     filtered = filtered.filter(msg => getPointSender(msg) === filters.sender)
-    console.log(`After sender filter: ${filtered.length} messages`)
   }
 
   // Apply chat filter
   if (filters.chat) {
     filtered = filtered.filter(msg => getPointChatName(msg) === filters.chat)
-    console.log(`After chat filter: ${filtered.length} messages`)
   }
 
   // Apply date range filter using string comparison
@@ -466,7 +461,6 @@ function applyFilters() {
 
       return false
     })
-    console.log(`After start date filter: ${filtered.length} messages`)
   }
 
   if (filters.endDate) {
@@ -485,7 +479,6 @@ function applyFilters() {
 
       return false
     })
-    console.log(`After end date filter: ${filtered.length} messages`)
   }
 
   // Content search if specified
@@ -495,7 +488,6 @@ function applyFilters() {
       const content = getPointContent(msg);
       return content && content.toLowerCase().includes(searchLower);
     });
-    console.log(`After content search: ${filtered.length} messages`);
   }
 
   // Sort by timestamp 
@@ -513,12 +505,6 @@ function applyFilters() {
 
   filteredMessages.value = filtered
   currentPage.value = 1 // Reset to first page when filters change
-
-  // Log the filter results
-  if (filters.startDate && filters.startDate === filters.endDate) {
-    console.log(`Showing messages for date: ${filters.startDate}`)
-    console.log(`Found ${filtered.length} messages for this date`)
-  }
 }
 
 function resetAllFilters() {
@@ -679,13 +665,10 @@ function getPointTimestamp(point) {
 }
 
 function getPointContent(point) {
-  if (!point) return null
-  // Check for different possible field names for the message content
-  if (isNewFormat(point)) {
-    return point.message || point.text || null
-  } else {
-    return point.content || point.text || null
-  }
+  if (!point) return null;
+
+  // Match the SQL query's COALESCE logic
+  return point.message || point.text || point.content || '';
 }
 
 function getPointChatName(point) {

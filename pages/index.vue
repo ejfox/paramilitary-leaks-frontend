@@ -6,14 +6,44 @@
     <!-- Navigation Bar -->
     <TopBar current-page="Timeline">
       <template #additional-links>
-        <!-- Additional page-specific links can be added here if needed -->
+        <!-- Mobile View Switcher -->
+        <button v-if="isMobile && !showSidebar" @click="showSidebar = true"
+          class="md:hidden text-gray-300 hover:text-white flex items-center">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+            <path fill-rule="evenodd"
+              d="M3 5a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM3 10a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM3 15a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1z"
+              clip-rule="evenodd" />
+          </svg>
+          <span class="ml-1">Details</span>
+        </button>
       </template>
     </TopBar>
 
-    <div class="flex flex-1 overflow-hidden">
-      <!-- Metadata Sidebar (1/3 width) -->
-      <div class="w-1/3 p-4 border-r border-gray-700 flex flex-col overflow-y-auto h-full custom-scrollbar">
-        <div class="flex items-center justify-between mb-4">
+    <div class="flex flex-1 overflow-hidden flex-col md:flex-row relative">
+      <!-- Mobile overlay for sidebar - only visible when sidebar is shown on mobile -->
+      <div v-if="isMobile && showSidebar" class="fixed inset-0 bg-black bg-opacity-50 z-30 md:hidden"
+        @click="showSidebar = false"></div>
+
+      <!-- Metadata Sidebar - Full width on mobile when shown, 1/3 width on desktop -->
+      <div :class="[
+        'bg-gray-900 border-gray-700 flex flex-col overflow-y-auto custom-scrollbar transition-all duration-300',
+        isMobile ? 'fixed inset-0 z-40 p-4' : 'w-full md:w-1/3 p-4 border-r'
+      ]" :style="isMobile ? { transform: showSidebar ? 'translateX(0)' : 'translateX(-100%)' } : {}">
+
+        <!-- Close button for mobile sidebar -->
+        <div v-if="isMobile" class="flex items-center justify-between mb-4">
+          <h1 class="text-white text-xl font-bold">Paramilitary Leaks</h1>
+          <button @click="showSidebar = false" class="text-gray-400 hover:text-white">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" viewBox="0 0 20 20" fill="currentColor">
+              <path fill-rule="evenodd"
+                d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"
+                clip-rule="evenodd" />
+            </svg>
+          </button>
+        </div>
+
+        <!-- Desktop header - only shown on desktop -->
+        <div v-else class="flex items-center justify-between mb-4">
           <h1 class="text-white text-xl font-bold">Paramilitary Leaks</h1>
         </div>
 
@@ -158,11 +188,24 @@
               Hold Shift to select multiple points
             </div>
           </div>
+
+          <!-- Mobile-only close button at the bottom of sidebar -->
+          <div v-if="isMobile" class="mt-4">
+            <button @click="showSidebar = false"
+              class="w-full bg-gray-700 hover:bg-gray-600 text-white py-3 px-4 rounded-lg transition-colors flex items-center justify-center">
+              <span>Return to Visualization</span>
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 ml-2" viewBox="0 0 20 20" fill="currentColor">
+                <path fill-rule="evenodd"
+                  d="M10.293 15.707a1 1 0 010-1.414L14.586 10l-4.293-4.293a1 1 0 111.414-1.414l5 5a1 1 0 010 1.414l-5 5a1 1 0 01-1.414 0z"
+                  clip-rule="evenodd" />
+              </svg>
+            </button>
+          </div>
         </div>
       </div>
 
-      <!-- Main Visualization (2/3 width) -->
-      <div class="w-2/3 flex flex-col overflow-hidden relative">
+      <!-- Main Visualization - Full width on mobile, 2/3 width on desktop -->
+      <div class="flex-1 flex flex-col overflow-hidden relative">
         <div v-if="loading" class="flex-1 flex items-center justify-center">
           <div class="flex items-center">
             <div class="animate-spin mr-3">
@@ -272,7 +315,7 @@
                 </button>
               </div>
 
-              <div class="grid grid-cols-2 gap-4">
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <!-- Total Messages -->
                 <div class="feltron-card p-4">
                   <div class="feltron-title">Total Messages</div>
@@ -290,7 +333,7 @@
                 </div>
 
                 <!-- Top Senders Visualization -->
-                <div class="feltron-card p-4 col-span-2">
+                <div class="feltron-card p-4 col-span-1 md:col-span-2">
                   <div class="feltron-title">Top Senders</div>
                   <div class="space-y-2 mt-3 max-h-80 overflow-y-auto custom-scrollbar pr-1">
                     <div v-for="(sender, index) in stats.topSenders" :key="sender.name"
@@ -311,7 +354,7 @@
                 </div>
 
                 <!-- Selected Messages (only shown when points are selected) -->
-                <div v-if="selectedPoints.length > 0" class="feltron-card p-4 col-span-2">
+                <div v-if="selectedPoints.length > 0" class="feltron-card p-4 col-span-1 md:col-span-2">
                   <div class="feltron-title">Selected Messages</div>
                   <div class="text-white text-sm mb-2">
                     Showing {{ Math.min(selectedPoints.length, 100) }} of {{ selectedPoints.length }} selected messages
@@ -341,6 +384,18 @@
             </div>
           </div>
         </transition>
+      </div>
+
+      <!-- Mobile Action Button - only on mobile and when sidebar is hidden -->
+      <div v-if="isMobile && !showSidebar" class="fixed right-4 bottom-4 z-30">
+        <button @click="showSidebar = true"
+          class="bg-blue-600 text-white w-14 h-14 rounded-full shadow-lg flex items-center justify-center">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" viewBox="0 0 20 20" fill="currentColor">
+            <path fill-rule="evenodd"
+              d="M3 5a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM3 10a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM3 15a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1z"
+              clip-rule="evenodd" />
+          </svg>
+        </button>
       </div>
     </div>
   </div>
@@ -375,6 +430,10 @@ const streamingProgress = reactive({
   startTime: 0,
   message: ''
 })
+
+// Mobile specific state
+const isMobile = ref(false)
+const showSidebar = ref(false)
 
 const appStore = useAppStore()
 const colorMap = useColorMap()
@@ -886,15 +945,28 @@ watch(selectedPoints, (newSelectedPoints) => {
 
 // Handle window resize
 function handleResize() {
+  checkIfMobile()
+
   if (activeView.value === 'time') {
     nextTick(() => {
       resizeVisualization();
     });
   }
+
+  // If we're on desktop, always show sidebar
+  if (!isMobile.value) {
+    showSidebar.value = false
+  }
 }
 
 onMounted(async () => {
   try {
+    // Check if mobile on initial load
+    checkIfMobile()
+
+    // Set up resize listener
+    window.addEventListener('resize', handleResize)
+
     console.log('Loading parquet data from R2...')
     loading.value = true
 
@@ -947,6 +1019,15 @@ onMounted(async () => {
     console.log(`Successfully loaded ${result.data.length} rows from R2`)
     console.log('First data point sample:', result.data[0])
 
+    // Additional logging for troubleshooting
+    console.log('TIMESTAMP CHECK - First 5 points:',
+      result.data.slice(0, 5).map(p => ({
+        raw: p.date || p.timestamp,
+        parsed: getPointTimestamp(p) ? 'valid' : 'invalid',
+        type: typeof (p.date || p.timestamp)
+      }))
+    );
+
     // Validate the data has required fields
     const samplePoint = result.data[0]
     const hasTimestamp = samplePoint.timestamp || samplePoint.date
@@ -993,6 +1074,8 @@ onMounted(async () => {
           })
           .filter(Boolean)
 
+        console.log(`Found ${validTimestamps.length} valid timestamps out of ${result.data.length} records`);
+
         if (validTimestamps.length > 0) {
           const [minDate, maxDate] = d3.extent(validTimestamps)
           if (minDate && maxDate) {
@@ -1000,6 +1083,8 @@ onMounted(async () => {
             const formatDateForInput = d3.timeFormat('%Y-%m-%d')
             appStore.setDateRange(formatDateForInput(minDate), formatDateForInput(maxDate))
           }
+        } else {
+          console.error('No valid timestamps found! Check timestamp parsing');
         }
       }
     } catch (dateErr) {
@@ -1032,8 +1117,14 @@ onMounted(async () => {
         if (result.data.length > 10000) {
           console.log('Large dataset detected, deferring render...')
           setTimeout(() => {
-            transformData(result.data)
-            loading.value = false
+            try {
+              transformData(result.data)
+              loading.value = false
+            } catch (transformErr) {
+              console.error('Error during deferred transform:', transformErr)
+              error.value = 'Error rendering visualization: ' + transformErr.message
+              loading.value = false
+            }
 
             // Clean up watchers when all processing is complete
             const checkComplete = watch(() => streamingStatus.active, (isActive) => {
@@ -1045,8 +1136,14 @@ onMounted(async () => {
             })
           }, 0)
         } else {
-          transformData(result.data)
-          loading.value = false
+          try {
+            transformData(result.data)
+            loading.value = false
+          } catch (transformErr) {
+            console.error('Error during transform:', transformErr)
+            error.value = 'Error rendering visualization: ' + transformErr.message
+            loading.value = false
+          }
 
           // Clean up watchers when all processing is complete
           const checkComplete = watch(() => streamingStatus.active, (isActive) => {
@@ -1101,6 +1198,11 @@ function resetFilters() {
   filteredData.value = rawData.value;
   calculateStats(rawData.value);
   resetView();
+}
+
+// Check if the screen is mobile sized
+function checkIfMobile() {
+  isMobile.value = window.innerWidth < 768 // md breakpoint in Tailwind
 }
 </script>
 
@@ -1196,5 +1298,17 @@ function resetFilters() {
   background-color: rgba(31, 41, 55, 1);
   border-left: 3px solid rgba(59, 130, 246, 0.8);
   box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+}
+
+/* Mobile specific styles */
+@media (max-width: 768px) {
+  .message-container {
+    height: 120px;
+    /* Smaller on mobile */
+  }
+
+  .feltron-card {
+    border-radius: 0.4rem;
+  }
 }
 </style>

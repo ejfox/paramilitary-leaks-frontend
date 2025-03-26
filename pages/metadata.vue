@@ -9,21 +9,13 @@
       <div v-if="loading" class="flex flex-col items-center justify-center py-8">
         <!-- Full Download Progress Component -->
         <div class="w-full max-w-lg mb-6">
-          <DownloadProgress 
-            :is-downloading="isDownloading"
-            :progress="downloadProgress"
-            :downloaded-bytes="downloadedBytes"
-            :total-bytes="totalBytes"
-            :status-message="downloadStatus || 'Loading data...'"
-            :download-start-time="downloadStartTime"
-            :show-cache-info="isCacheAvailable"
-            :cache-timestamp="cacheTimestamp"
-            :cached-size="cachedSize"
-            @refresh-cache="refreshCache"
-            @clear-cache="clearCache"
-          />
+          <DownloadProgress :is-downloading="isDownloading" :progress="downloadProgress"
+            :downloaded-bytes="downloadedBytes" :total-bytes="totalBytes"
+            :status-message="downloadStatus || 'Loading data...'" :download-start-time="downloadStartTime"
+            :show-cache-info="isCacheAvailable" :cache-timestamp="cacheTimestamp" :cached-size="cachedSize"
+            @refresh-cache="refreshCache" @clear-cache="clearCache" />
         </div>
-        
+
         <!-- Processing Status when not downloading -->
         <div v-if="!isDownloading && downloadStatus" class="flex items-center mt-2">
           <div class="animate-spin mr-3">
@@ -52,12 +44,103 @@
       </div>
 
       <div v-else class="flex flex-col space-y-6">
+        <!-- Summary Statistics Cards -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
+          <!-- Total Messages Card -->
+          <div class="feltron-card p-4 flex flex-col">
+            <div class="feltron-title">Total Messages</div>
+            <div class="flex items-center justify-between">
+              <div class="text-4xl text-white font-light leading-tight">{{ d3.format(",.0f")(totalMessages) }}</div>
+              <SparkLine :data="getMessageFrequencyData()" :width="100" :height="40" color="rgba(59, 130, 246, 0.8)" />
+            </div>
+            <div class="text-gray-400 text-xs mt-1">Analyzed through data</div>
+          </div>
+
+          <!-- Date Range Card -->
+          <div class="feltron-card p-4 flex flex-col">
+            <div class="feltron-title">Date Range</div>
+            <div class="text-2xl text-white font-light leading-tight">{{ getDateRangeDisplay() }}</div>
+            <div class="text-gray-400 text-xs mt-1">{{ getTimeSpanText() }}</div>
+          </div>
+
+          <!-- Replace Top Sender with Busiest Hour -->
+          <div class="feltron-card p-4 flex flex-col">
+            <div class="feltron-title">Busiest Hour</div>
+            <div class="text-xl text-white font-light leading-tight">{{ getBusiestHour() }}</div>
+            <div class="text-blue-400 text-sm mt-1">
+              {{ d3.format(",.0f")(getBusiestHourCount()) }} messages
+              <span class="text-gray-400 text-xs ml-1">({{ getBusiestHourPercentage() }}%)</span>
+            </div>
+          </div>
+
+          <!-- Peak Day Card -->
+          <div class="feltron-card p-4 flex flex-col">
+            <div class="feltron-title">Peak Day</div>
+            <div class="text-2xl text-white font-light leading-tight">{{ getPeakDay().date }}</div>
+            <div class="text-blue-400 text-sm mt-1">
+              {{ d3.format(",.0f")(getPeakDay().count) }} messages
+              <span class="text-gray-400 text-xs ml-1">({{ getPeakDayPercentage() }}%)</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Top Contributors Section -->
+        <div class="feltron-card p-6 mt-6">
+          <div class="flex justify-between items-center mb-4">
+            <div class="feltron-title">Top Contributors</div>
+            <div class="flex items-center gap-4">
+              <button v-if="streamGraphHighlightedSender" @click="clearStreamGraphHighlight"
+                class="text-xs text-red-400 hover:text-red-300 transition-colors flex items-center">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3 mr-1" viewBox="0 0 20 20" fill="currentColor">
+                  <path fill-rule="evenodd"
+                    d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"
+                    clip-rule="evenodd" />
+                </svg>
+                Clear Selection
+              </button>
+            </div>
+          </div>
+
+          <div v-if="loading" class="py-8 flex items-center justify-center">
+            <div class="animate-spin mr-3">
+              <svg class="w-5 h-5 text-blue-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                <path class="opacity-75" fill="currentColor"
+                  d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z">
+                </path>
+              </svg>
+            </div>
+            <div class="text-gray-400">Loading contributors...</div>
+          </div>
+
+          <div v-else>
+            <div class="text-gray-400 text-sm mb-4">
+              Showing top {{ Math.min(250, allSenders.length) }} of {{ allSenders.length }} contributors
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div v-for="(sender, index) in displayedContributors" :key="sender.name"
+                class="feltron-list-item flex items-center justify-between py-2 px-3 bg-gray-800 rounded hover:bg-gray-700 transition-colors"
+                :class="{ 'border-l-4 border-blue-500 pl-2': streamGraphHighlightedSender === sender.name }"
+                @click="handleStreamGraphHighlight(sender.name)">
+                <div class="flex-1 min-w-0">
+                  <div class="flex items-center">
+                    <div class="w-3 h-3 flex-shrink-0 rounded-full mr-2"
+                      :style="{ backgroundColor: getColor(sender.name) }"></div>
+                    <span class="text-white text-sm font-medium truncate">{{ sender.name }}</span>
+                  </div>
+                  <div class="text-gray-400 text-xs mt-1 ml-5 truncate">{{ getSenderDateRange(sender.name) }}</div>
+                </div>
+                <span class="text-blue-400 text-sm font-medium ml-4 flex-shrink-0">{{ d3.format(",.0f")(sender.count)
+                }}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
         <!-- Daily Message Count Chart -->
         <DailyMessageChart :messages-per-day="messagesPerDay" :total-messages="totalMessages"
-          :top-message-days="topMessageDays" @search-date="handleSearchDate" />
-
-        <!-- Top Message Days -->
-        <TopMessageDays :raw-data="rawData" @update:top-days="handleTopDaysUpdate" />
+          @search-date="handleSearchDate" />
 
         <!-- Date Search Results -->
         <div v-if="searchResults.length > 0" class="feltron-card p-6 rounded-lg">
@@ -78,9 +161,6 @@
             </div>
           </div>
         </div>
-
-        <!-- Files Overview -->
-        <FilesOverview />
 
         <!-- Streamgraph by Sender -->
         <StreamGraph :messages-by-sender="messagesBySender" :top-senders="allSenders"
@@ -106,9 +186,8 @@ import TopBar from '~/components/TopBar.vue'
 import DailyMessageChart from '~/components/metadata/DailyMessageChart.vue'
 import StreamGraph from '~/components/metadata/StreamGraph.vue'
 import MonthlyBreakdown from '~/components/metadata/MonthlyBreakdown.vue'
-import FilesOverview from '~/components/metadata/FilesOverview.vue'
-import TopMessageDays from '~/components/metadata/TopMessageDays.vue'
 import DownloadProgress from '~/components/DownloadProgress.vue'
+import SparkLine from '~/components/metadata/SparkLine.vue'
 
 const loading = ref(true)
 const error = ref(null)
@@ -121,7 +200,6 @@ const monthlyHighlightedSender = ref(null)
 const streamGraphHighlightedSender = ref(null)
 const searchResults = ref([])
 const searchDate = ref('')
-const topMessageDays = ref([])
 
 // Download and cache-related variables
 const isDownloading = ref(false)
@@ -135,9 +213,9 @@ const cacheTimestamp = ref(null)
 const cachedSize = ref(0)
 
 const { loadParquetFile, cleanup } = useParquetLoader()
-const { 
-  fetchFile, 
-  checkCache, 
+const {
+  fetchFile,
+  checkCache,
   clearCache: clearStorageCache,
   downloadProgress: r2DownloadProgress,
   downloadedBytes: r2DownloadedBytes,
@@ -150,12 +228,6 @@ const {
   cachedSize: r2CachedSize
 } = useR2Storage()
 const colorMap = useColorMap()
-
-// Handle top days update from TopMessageDays component
-function handleTopDaysUpdate(days) {
-  topMessageDays.value = days
-  console.log('Updated top message days:', days)
-}
 
 // Get all senders for the streamgraph
 const allSenders = computed(() => {
@@ -172,9 +244,267 @@ const allSenders = computed(() => {
     .sort((a, b) => b.count - a.count)
 })
 
+// Computed property for displayed contributors (with limit for performance)
+const displayedContributors = computed(() => {
+  // Show top 250 contributors for better performance
+  return allSenders.value.slice(0, 250)
+})
+
+// Cache for sender date ranges
+const senderDateRangeCache = ref(new Map())
+
+// Function to precompute date ranges for all senders
+function precomputeSenderDateRanges(data) {
+  console.log('Precomputing date ranges for all senders...')
+  const startTime = performance.now()
+
+  // Group messages by sender
+  const senderMessages = {}
+
+  data.forEach(msg => {
+    const sender = getMessageSender(msg)
+    if (!senderMessages[sender]) {
+      senderMessages[sender] = []
+    }
+
+    const timestamp = getMessageTimestamp(msg)
+    if (timestamp) {
+      senderMessages[sender].push(timestamp)
+    }
+  })
+
+  // Process each sender's messages and compute date range
+  Object.entries(senderMessages).forEach(([sender, timestamps]) => {
+    if (!timestamps.length) {
+      senderDateRangeCache.value.set(sender, 'No date info')
+      return
+    }
+
+    // Sort timestamps
+    timestamps.sort((a, b) => new Date(a) - new Date(b))
+
+    // Format the date range
+    const firstDate = formatShortDate(new Date(timestamps[0]).toISOString().slice(0, 10))
+    const lastDate = formatShortDate(new Date(timestamps[timestamps.length - 1]).toISOString().slice(0, 10))
+
+    // If same date, just show that date
+    if (firstDate === lastDate) {
+      senderDateRangeCache.value.set(sender, firstDate)
+    } else {
+      senderDateRangeCache.value.set(sender, `${firstDate} - ${lastDate}`)
+    }
+  })
+
+  const duration = (performance.now() - startTime).toFixed(2)
+  console.log(`Precomputed date ranges for ${senderDateRangeCache.value.size} senders in ${duration}ms`)
+}
+
+// Helper function to get date range for a specific sender
+function getSenderDateRange(senderName) {
+  // Check cache first
+  if (senderDateRangeCache.value.has(senderName)) {
+    return senderDateRangeCache.value.get(senderName)
+  }
+
+  // Find all messages from this sender
+  const messages = rawData.value.filter(msg => getMessageSender(msg) === senderName)
+
+  if (!messages.length) {
+    senderDateRangeCache.value.set(senderName, 'No date info')
+    return 'No date info'
+  }
+
+  // Get timestamps for all messages
+  const timestamps = messages
+    .map(msg => getMessageTimestamp(msg))
+    .filter(Boolean)
+    .map(date => new Date(date))
+    .sort((a, b) => a - b)
+
+  if (!timestamps.length) {
+    senderDateRangeCache.value.set(senderName, 'No date info')
+    return 'No date info'
+  }
+
+  // Format the date range
+  const firstDate = formatShortDate(timestamps[0].toISOString().slice(0, 10))
+  const lastDate = formatShortDate(timestamps[timestamps.length - 1].toISOString().slice(0, 10))
+
+  // If same date, just show that date
+  if (firstDate === lastDate) {
+    senderDateRangeCache.value.set(senderName, firstDate)
+    return firstDate
+  }
+
+  const result = `${firstDate} - ${lastDate}`
+  senderDateRangeCache.value.set(senderName, result)
+  return result
+}
+
+// Expose colorMap to the template
+const getColor = (senderName) => {
+  if (!senderName) return '#cccccc'; // Default gray for unknown senders
+
+  // Try to get color from the color map
+  const color = colorMap.getSenderColor(senderName);
+
+  // If we got a valid color, return it
+  if (color && color !== '#000000') return color;
+
+  // Generate a consistent color based on the string
+  const hash = senderName.split('').reduce((acc, char) => {
+    return char.charCodeAt(0) + ((acc << 5) - acc);
+  }, 0);
+
+  // Generate a bright, saturated HSL color
+  const h = Math.abs(hash) % 360;
+  return `hsl(${h}, 70%, 45%)`;
+}
+
+// Helper functions for the summary stats cards
+function getDateRangeDisplay() {
+  if (!messagesPerDay.value || !messagesPerDay.value.length) return 'No data'
+
+  const dates = messagesPerDay.value.map(d => d.date).sort()
+  const start = dates[0]
+  const end = dates[dates.length - 1]
+
+  return `${formatShortDate(start)} - ${formatShortDate(end)}`
+}
+
+function getTimeSpanText() {
+  if (!messagesPerDay.value || !messagesPerDay.value.length) return '';
+
+  const dates = messagesPerDay.value.map(d => new Date(d.date)).sort((a, b) => a - b);
+  const start = dates[0];
+  const end = dates[dates.length - 1];
+
+  // Calculate difference in days
+  const diffDays = Math.round((end - start) / (1000 * 60 * 60 * 24));
+
+  if (diffDays < 30) {
+    return `${diffDays} days of data`;
+  } else if (diffDays < 365) {
+    const months = Math.round(diffDays / 30);
+    return `${months} month${months > 1 ? 's' : ''} of data`;
+  } else {
+    const years = (diffDays / 365).toFixed(1);
+    return `${years} year${years !== '1.0' ? 's' : ''} of data`;
+  }
+}
+
+// Busiest hour functions
+function getBusiestHour() {
+  if (!rawData.value || rawData.value.length === 0) return 'Unknown';
+
+  // Count messages by hour
+  const hourCounts = Array(24).fill(0);
+
+  rawData.value.forEach(msg => {
+    const timestamp = getMessageTimestamp(msg);
+    if (timestamp) {
+      const hour = timestamp.getHours();
+      hourCounts[hour]++;
+    }
+  });
+
+  // Find busiest hour
+  let busiestHour = 0;
+  let maxCount = 0;
+
+  hourCounts.forEach((count, hour) => {
+    if (count > maxCount) {
+      maxCount = count;
+      busiestHour = hour;
+    }
+  });
+
+  // Format hour as 12-hour time with AM/PM
+  return formatHour(busiestHour);
+}
+
+function formatHour(hour) {
+  const ampm = hour >= 12 ? 'PM' : 'AM';
+  const hour12 = hour % 12 || 12; // Convert 0 to 12 for 12 AM
+  return `${hour12} ${ampm}`;
+}
+
+function getBusiestHourCount() {
+  if (!rawData.value || rawData.value.length === 0) return 0;
+
+  // Count messages by hour
+  const hourCounts = Array(24).fill(0);
+
+  rawData.value.forEach(msg => {
+    const timestamp = getMessageTimestamp(msg);
+    if (timestamp) {
+      const hour = timestamp.getHours();
+      hourCounts[hour]++;
+    }
+  });
+
+  // Return max count
+  return Math.max(...hourCounts);
+}
+
+function getBusiestHourPercentage() {
+  if (totalMessages.value === 0) return 0;
+  return Math.round((getBusiestHourCount() / totalMessages.value) * 100);
+}
+
+function getTopSender() {
+  if (!allSenders.value || !allSenders.value.length) return { name: 'Unknown', count: 0 }
+  return allSenders.value[0]
+}
+
+function getSenderPercentage() {
+  if (totalMessages.value === 0 || !getTopSender().count) return 0;
+  return Math.round((getTopSender().count / totalMessages.value) * 100);
+}
+
+function getPeakDay() {
+  if (!messagesPerDay.value || !messagesPerDay.value.length) return { date: 'Unknown', count: 0 }
+
+  const sorted = [...messagesPerDay.value].sort((a, b) => b.count - a.count)
+  return {
+    date: formatShortDate(sorted[0].date),
+    count: sorted[0].count
+  }
+}
+
+function getPeakDayPercentage() {
+  if (totalMessages.value === 0 || !getPeakDay().count) return 0;
+  return Math.round((getPeakDay().count / totalMessages.value) * 100);
+}
+
+function getMessageFrequencyData() {
+  if (!messagesPerDay.value || messagesPerDay.value.length === 0) return [0];
+
+  // Get last 30 days or all if less
+  const count = Math.min(messagesPerDay.value.length, 30);
+  return messagesPerDay.value.slice(-count).map(d => d.count);
+}
+
+// Format date for display (MMM D)
+function formatShortDate(dateStr) {
+  if (!dateStr) return '';
+  const [year, month, day] = dateStr.split('-')
+  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+  return `${months[parseInt(month) - 1]} ${parseInt(day)}`
+}
+
 // Handle highlighting separately for each component
 function handleStreamGraphHighlight(sender) {
-  streamGraphHighlightedSender.value = sender
+  // Toggle highlight if clicking the same sender
+  if (streamGraphHighlightedSender.value === sender) {
+    streamGraphHighlightedSender.value = null
+  } else {
+    streamGraphHighlightedSender.value = sender
+  }
+}
+
+function clearStreamGraphHighlight() {
+  streamGraphHighlightedSender.value = null
 }
 
 function handleMonthlyHighlight(sender) {
@@ -447,12 +777,12 @@ async function loadData({ forceFresh = false } = {}) {
     console.log('Loading parquet data...')
     loading.value = true
     error.value = null
-    
+
     // First check if cache is available
     if (!forceFresh) {
       await checkCache()
     }
-    
+
     // Sync R2 state with our local state
     isDownloading.value = r2IsDownloading.value
     downloadProgress.value = r2DownloadProgress.value
@@ -463,7 +793,7 @@ async function loadData({ forceFresh = false } = {}) {
     isCacheAvailable.value = r2IsCacheAvailable.value
     cacheTimestamp.value = r2CacheTimestamp.value
     cachedSize.value = r2CachedSize.value
-    
+
     // Set up watchers to keep values in sync during download
     const unwatchFns = [
       watch(r2IsDownloading, (val) => { isDownloading.value = val }),
@@ -473,28 +803,38 @@ async function loadData({ forceFresh = false } = {}) {
       watch(r2DownloadStartTime, (val) => { downloadStartTime.value = val }),
       watch(r2DownloadStatus, (val) => { downloadStatus.value = val }),
     ]
-    
+
     // Use our cached fetchFile function which handles caching
     const result = await loadParquetFile()
-    
+
     // Clean up watchers
     unwatchFns.forEach(unwatchFn => unwatchFn())
-    
+
     if (!result.success) {
       throw new Error(result.error || 'Failed to load data')
     }
-    
+
     console.log(`Successfully loaded ${result.data.length} rows`)
     rawData.value = result.data
     totalMessages.value = result.data.length
 
     // Initialize the color map with all data
-    colorMap.initialize(result.data, getMessageSender)
+    try {
+      console.log('Initializing color map with all data...')
+      colorMap.initialize(result.data, getMessageSender)
+      console.log('Color map initialized successfully')
+    } catch (colorErr) {
+      console.error('Error initializing color map:', colorErr)
+      // Continue anyway - visualization will use fallback colors
+    }
 
     // Process data for different visualizations
     messagesPerMonth.value = processDataByMonth(result.data)
     messagesPerDay.value = processDataByDay(result.data)
     messagesBySender.value = processDataForStreamgraph(result.data)
+
+    // Precompute sender date ranges
+    precomputeSenderDateRanges(result.data)
 
     loading.value = false
   } catch (err) {
@@ -516,7 +856,7 @@ async function refreshCache() {
   try {
     loading.value = true
     error.value = null
-    
+
     // Force a fresh download from the network
     await loadData({ forceFresh: true })
   } catch (err) {
@@ -532,10 +872,10 @@ async function clearCache() {
     loading.value = true
     error.value = null
     downloadStatus.value = 'Clearing cache...'
-    
+
     // Clear cache from storage
     await clearStorageCache()
-    
+
     // Reload data
     await loadData()
   } catch (err) {

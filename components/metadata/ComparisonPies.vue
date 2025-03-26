@@ -81,7 +81,7 @@ import * as d3 from 'd3'
 import { useParquetLoader } from '~/composables/useParquetLoader'
 
 // State
-const loading = ref(true)
+const loading = ref(false)
 const error = ref(null)
 const totalFiles = ref(0)
 const fileFormats = ref({})
@@ -261,8 +261,8 @@ const createBarChart = () => {
 
 // Load data
 const loadData = async () => {
-  loading.value = true
   try {
+    loading.value = true
     const { loadParquetFile } = useParquetLoader()
     const result = await loadParquetFile()
 
@@ -299,10 +299,11 @@ const loadData = async () => {
     createDonutChart()
     createBarChart()
 
-    loading.value = false
+    error.value = null
   } catch (err) {
     console.error('Error loading comparison data:', err)
     error.value = err.message
+  } finally {
     loading.value = false
   }
 }

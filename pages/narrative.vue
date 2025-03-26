@@ -32,6 +32,36 @@
     <StatsSection ref="statsSection" :rawData="rawData" :messagesBySender="messagesBySender" :allSenders="allSenders"
       :totalFileSize="totalFileSize" @update:top-days="handleTopDaysUpdate" />
 
+
+    <section class="bg-black py-20 relative z-10">
+      <div class="container mx-auto px-4">
+        <h2 class="text-4xl font-bold mb-8 text-white">Exploring the Paramilitary Leaks</h2>
+        <div class="text-xl text-gray-300 max-w-3xl mx-auto mb-10 space-y-6">
+          <p>
+            Released by <a href="https://ddosecrets.com/article/paramilitary-leaks"
+              class="text-blue-400 hover:underline" target="_blank" rel="noopener">Distributed Denial of Secrets</a>:
+            "200 gigabytes of chat logs and recordings from paramilitary groups and militias including American
+            Patriots Three Percent (APIII) and the Oath Keepers, collected by wilderness survival guide John Williams."
+          </p>
+        </div>
+        <div class="flex flex-col md:flex-row justify-center gap-4">
+          <NuxtLink to="/feed"
+            class="inline-block px-8 py-4 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors text-lg font-medium shadow-lg hover:shadow-xl">
+            Explore The Messages
+          </NuxtLink>
+          <a href="https://micahflee.com/exploring-the-paramilitary-leaks/" target="_blank" rel="noopener"
+            class="inline-block px-8 py-4 bg-gray-800 hover:bg-gray-700 text-white rounded-lg transition-colors text-lg font-medium shadow-lg hover:shadow-xl">
+            Read Micah Lee's Analysis
+          </a>
+          <a href="https://ddosecrets.com/article/paramilitary-leaks" target="_blank" rel="noopener"
+            class="inline-block px-8 py-4 bg-gray-700 hover:bg-gray-600 text-white rounded-lg transition-colors text-lg font-medium shadow-lg hover:shadow-xl">
+            View on DDoSecrets
+          </a>
+        </div>
+      </div>
+    </section>
+
+
     <!-- Story section -->
     <section ref="storyContainer" class="relative w-full bg-gray-950">
       <!-- Story content -->
@@ -52,47 +82,6 @@
             Each point represents a message sender in the network. The visualization shows common communication
             patterns.
           </div>
-        </div>
-      </div>
-    </section>
-
-    <!-- Footer section with call to action -->
-    <section class="bg-black py-20 relative z-10">
-      <div class="container mx-auto px-4 text-center">
-        <h2 class="text-4xl font-bold mb-8 text-white">Understanding the Paramilitary Leaks</h2>
-        <div class="text-xl text-gray-300 max-w-3xl mx-auto mb-10 space-y-6">
-          <p>
-            According to <a href="https://ddosecrets.com/article/paramilitary-leaks"
-              class="text-blue-400 hover:underline" target="_blank" rel="noopener">Distributed Denial of Secrets</a>:
-            "Over 200 gigabytes of chat logs and recordings from paramilitary groups and militias including American
-            Patriots Three Percent (APIII) and the Oath Keepers, collected by wilderness survival guide John Williams.
-            The data identifies members and the organizational structure of the groups."
-          </p>
-          <p>
-            After Trump supporters stormed the U.S. Capitol on January 6, 2021, Williams began infiltrating U.S.
-            paramilitary groups. He eventually led the Utah chapter and gained access to the upper echelon of APIII and
-            their discussions. This release includes more than 50,000 files from Williams' work.
-          </p>
-          <p>
-            As journalist Micah Lee discovered: "While digging through the Paramilitary Leaks dataset, I came across
-            American Community Outreach Network (ACON), a now-defunct front group that American Patriots Three Percent
-            used to accept donations. In leaked internal militia chats, video, and voice messages, AP III militia
-            leaders repeatedly claimed that ACON was a 501c3 tax-exempt non-profit organization. This was a lie."
-          </p>
-        </div>
-        <div class="flex flex-col md:flex-row justify-center gap-4">
-          <NuxtLink to="/feed"
-            class="inline-block px-8 py-4 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors text-lg font-medium shadow-lg hover:shadow-xl">
-            Explore The Messages
-          </NuxtLink>
-          <a href="https://micahflee.com/exploring-the-paramilitary-leaks/" target="_blank" rel="noopener"
-            class="inline-block px-8 py-4 bg-gray-800 hover:bg-gray-700 text-white rounded-lg transition-colors text-lg font-medium shadow-lg hover:shadow-xl">
-            Read Micah Lee's Analysis
-          </a>
-          <a href="https://ddosecrets.com/article/paramilitary-leaks" target="_blank" rel="noopener"
-            class="inline-block px-8 py-4 bg-gray-700 hover:bg-gray-600 text-white rounded-lg transition-colors text-lg font-medium shadow-lg hover:shadow-xl">
-            View on DDoSecrets
-          </a>
         </div>
       </div>
     </section>
@@ -153,8 +142,8 @@
                 <div class="text-blue-400 text-sm font-medium">ProPublica</div>
               </div>
             </a>
-            <a href="https://www.propublica.org/article/militia-three-percenter-january-6" target="_blank"
-              rel="noopener"
+            <a href="https://www.propublica.org/article/inside-secret-ap3-militia-american-patriots-three-percent"
+              target="_blank" rel="noopener"
               class="bg-gray-900 rounded-lg overflow-hidden shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-1">
               <div class="p-6">
                 <h4 class="text-xl font-bold text-white mb-3">Armed and Underground</h4>
@@ -188,15 +177,7 @@
                 <div class="text-blue-400 text-sm font-medium">Augusta Free Press</div>
               </div>
             </a>
-            <a href="https://www.sltrib.com/news/politics/2022/09/07/iron-county-gop-leader-oath/" target="_blank"
-              rel="noopener"
-              class="bg-gray-900 rounded-lg overflow-hidden shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-1">
-              <div class="p-6">
-                <h4 class="text-xl font-bold text-white mb-3">Iron County GOP Leader on Oath Keepers List</h4>
-                <p class="text-gray-300 mb-4">Investigation into political figures connected to extremist groups.</p>
-                <div class="text-blue-400 text-sm font-medium">Salt Lake Tribune</div>
-              </div>
-            </a>
+
           </div>
         </div>
       </div>

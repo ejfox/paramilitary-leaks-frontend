@@ -55,7 +55,8 @@
 
         <div class="space-y-1.5 mb-4">
           <div class="flex justify-between">
-            <span class="text-gray-300 text-sm truncate">Unknown</span>
+            <span class="text-gray-300 text-sm truncate">Unknown <span class="text-gray-600">(Deleted
+                Accounts)</span></span>
             <span class="text-green-300 text-sm">28.4K</span>
           </div>
           <div class="flex justify-between">
@@ -73,30 +74,6 @@
           <div class="flex justify-between">
             <span class="text-gray-300 text-sm truncate">Scot AP founder Pa Z5</span>
             <span class="text-green-300 text-sm">6.1K</span>
-          </div>
-        </div>
-
-        <div class="text-xs text-gray-400 border-t border-gray-700/50 pt-2">
-          <div class="text-center">
-            <div class="inline-block px-1.5 py-0.5 rounded border border-green-700/50 text-green-400 text-xs mx-1">2020
-            </div>
-            <div class="inline-block px-1.5 py-0.5 rounded border border-green-700/50 text-green-400 text-xs mx-1">2021
-            </div>
-            <div class="inline-block px-1.5 py-0.5 rounded border border-green-700/50 text-green-400 text-xs mx-1">2022
-            </div>
-            <div class="inline-block px-1.5 py-0.5 rounded border border-green-700/50 text-green-400 text-xs mx-1">2023
-            </div>
-            <div class="inline-block px-1.5 py-0.5 rounded border border-green-700/50 text-green-400 text-xs mx-1">2024
-            </div>
-          </div>
-          <div class="w-full h-3 bg-gray-800/50 mt-2 rounded-sm overflow-hidden">
-            <div class="flex h-full">
-              <div class="w-1/6 bg-green-800/40"></div>
-              <div class="w-1/3 bg-green-600/40"></div>
-              <div class="w-1/4 bg-green-500/40"></div>
-              <div class="w-1/12 bg-green-600/40"></div>
-              <div class="w-1/6 bg-green-800/40"></div>
-            </div>
           </div>
         </div>
       </div>
@@ -187,8 +164,9 @@
         <!-- Preview of what's coming next to provide visual content during transition -->
         <div class="container mx-auto px-6 h-full flex flex-col justify-end pb-24 transition-all duration-1000"
           :style="{ opacity: Math.max(0, (videoProgress - 0.7) * 3.33), transform: `translateY(${Math.max(0, (1 - videoProgress * 1.1)) * 100}px)` }">
-          <h2 class="text-3xl md:text-4xl font-bold text-white mb-8 text-shadow-lg">The Archive: Williams' Secret Data
-            Collection</h2>
+          <h2 class="text-3xl md:text-4xl font-bold text-white mb-8 text-shadow-lg">The Archive: John Williams' American
+            Paramilitary Leaks
+          </h2>
           <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
             <div class="bg-gray-800/30 backdrop-blur-sm rounded-lg p-5 transform opacity-0 transition-all duration-700"
               :style="{

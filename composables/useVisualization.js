@@ -334,10 +334,33 @@ export function useVisualization() {
     if (timestamp instanceof Date) return timestamp
 
     // If it's a string with ISO format
-    if (typeof timestamp === 'string' && timestamp.length >= 10) {
+    if (typeof timestamp === 'string') {
+      // Log a sample of timestamps for debugging (only occasionally)
+      if (Math.random() < 0.0001) {
+        // Log only 0.01% of timestamps
+        console.log('Sample timestamp string format:', timestamp)
+      }
+
       try {
+        // First try parsing as-is
         const date = new Date(timestamp)
         if (!isNaN(date.getTime())) return date
+
+        // If that fails, try parsing just the date portion for partial ISO strings
+        if (timestamp.includes('-') && timestamp.length >= 10) {
+          const datePart = timestamp.substring(0, 10)
+          const dateOnlyObj = new Date(datePart)
+          if (!isNaN(dateOnlyObj.getTime())) return dateOnlyObj
+        }
+
+        // Try unix-style timestamp if it's all digits
+        if (/^\d+$/.test(timestamp)) {
+          const num = parseInt(timestamp, 10)
+          // Convert to ms if needed (seconds vs milliseconds)
+          const msTimestamp = num < 10000000000 ? num * 1000 : num
+          const unixDate = new Date(msTimestamp)
+          if (!isNaN(unixDate.getTime())) return unixDate
+        }
       } catch (err) {
         console.warn('Failed to parse string timestamp:', timestamp)
       }
@@ -413,6 +436,17 @@ export function useVisualization() {
     try {
       // First verify the data structure and log a sample
       console.log('Sample data point:', rawData[0])
+
+      // Check timestamp parsing for first few points
+      const samplePoints = rawData.slice(0, 5)
+      console.log(
+        'Timestamp parsing check:',
+        samplePoints.map((p) => ({
+          raw: p.date || p.timestamp,
+          parsed: getPointTimestamp(p),
+          valid: !!getPointTimestamp(p)
+        }))
+      )
 
       // Filter out invalid timestamps and transform data
       const validData = rawData.filter((msg) => {
@@ -589,6 +623,17 @@ export function useVisualization() {
         if (isLastBatch || !streaming) {
           try {
             console.log(`Drawing all ${allX.length} points...`)
+
+            // Safety check - if we have no valid points, create at least one dummy point
+            if (allX.length === 0) {
+              console.warn(
+                'No valid points to draw! Adding a dummy point to avoid errors.'
+              )
+              allX.push(0)
+              allY.push(0)
+              allCategories.push(0)
+            }
+
             scatterplot.draw({
               x: allX,
               y: allY,
@@ -727,6 +772,18 @@ export function useVisualization() {
           }
         } else {
           console.error('No valid points to draw!')
+
+          // Add a single dummy point to avoid rendering errors
+          try {
+            console.warn('Adding a dummy point to avoid rendering errors')
+            scatterplot.draw({
+              x: [0],
+              y: [0],
+              category: [0]
+            })
+          } catch (fallbackErr) {
+            console.error('Fallback rendering also failed:', fallbackErr)
+          }
         }
       }
     } catch (err) {

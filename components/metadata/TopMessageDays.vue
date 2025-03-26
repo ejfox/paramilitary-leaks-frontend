@@ -14,29 +14,56 @@
       <div class="text-white">Calculating top message days...</div>
     </div>
 
-    <div v-else-if="error" class="text-red-500 p-4">{{ error }}</div>
+    <div v-else-if="error" class="text-red-500 p-4 bg-red-900/30 rounded">
+      <div class="font-medium">Error Processing Data</div>
+      <div class="text-sm mt-1">{{ error }}</div>
+    </div>
 
     <div v-else class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
       <div v-for="(day, index) in topDays" :key="index"
-        class="bg-gray-800 p-4 rounded-lg border-l-2 hover:bg-gray-700 transition-colors"
+        class="bg-gray-800/80 p-4 rounded-lg border-l-2 hover:bg-gray-700/80 transition-colors relative group"
         :style="{ borderColor: getDayColor(index) }">
+        <!-- Date and count -->
         <div class="text-white text-lg font-light mb-1">{{ formatDate(day.date) }}</div>
-        <div class="text-blue-400 text-2xl font-light mb-3">{{ formatNumber(day.count) }} messages</div>
+        <div class="text-blue-400 text-2xl font-light mb-3 flex items-baseline">
+          <span>{{ formatNumber(day.count) }}</span>
+          <span class="text-sm ml-2 text-blue-300">messages</span>
+        </div>
 
-        <!-- Top senders for this day -->
+        <!-- Top senders with percentage -->
         <div class="space-y-2 mb-3">
-          <div v-for="(sender, i) in day.topSenders" :key="i" class="flex items-center">
+          <div v-for="(sender, i) in day.topSenders" :key="i"
+            class="flex items-center p-1 rounded hover:bg-gray-700 transition-colors">
             <div class="w-2 h-2 rounded-full mr-2" :style="{ backgroundColor: getSenderColor(sender.name) }"></div>
-            <div class="text-white text-sm">{{ sender.name }}</div>
-            <div class="text-gray-400 text-xs ml-auto">{{ formatNumber(sender.count) }}</div>
+            <div class="text-white text-sm flex-grow truncate" :title="sender.name">{{ sender.name }}</div>
+            <div class="text-gray-400 text-xs ml-2">
+              {{ formatNumber(sender.count) }}
+              <span class="text-gray-500 ml-1">({{ Math.round(sender.count / day.count * 100) }}%)</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Sample messages preview -->
+        <div v-if="day.messages.length > 0" class="mt-4 pt-3 border-t border-gray-700/50">
+          <div class="text-xs text-gray-400 mb-2">Sample Messages:</div>
+          <div class="space-y-2">
+            <div v-for="(msg, i) in day.messages.slice(0, 2)" :key="i" class="text-sm text-gray-300 truncate"
+              :title="msg.message || msg.text || msg.content">
+              {{ msg.message || msg.text || msg.content || 'No content' }}
+            </div>
           </div>
         </div>
 
         <!-- Link to feed view -->
         <NuxtLink :to="{ path: '/feed', query: { date: day.date } }"
-          class="block w-full text-center bg-blue-600 hover:bg-blue-700 text-white text-xs py-1.5 px-3 rounded mt-2 transition-colors">
-          View Messages
+          class="block w-full text-center bg-blue-600 hover:bg-blue-700 text-white text-xs py-1.5 px-3 rounded mt-3 transition-colors">
+          View All Messages
         </NuxtLink>
+
+        <!-- Rank indicator -->
+        <div class="absolute top-2 right-2 text-xs text-gray-500">
+          #{{ index + 1 }}
+        </div>
       </div>
     </div>
   </div>
@@ -60,183 +87,82 @@ const props = defineProps({
 const emit = defineEmits(['update:top-days'])
 
 const colorMap = useColorMap()
-const loading = ref(true)
+const loading = ref(false)
 const error = ref(null)
 const topDays = ref([])
 
 // Get top message days using direct data processing
-async function getTopMessageDays() {
+function getTopMessageDays() {
   try {
-    loading.value = true
-    error.value = null
+    // Process all messages to get accurate daily counts
+    const messagesByDay = new Map()
+    const today = new Date().toISOString().substring(0, 10)
 
-    // For large datasets, use a more efficient approach
-    if (props.rawData.length > 10000) {
-      console.log(`Large dataset (${props.rawData.length} messages) - using optimized approach`)
+    // Process all messages to get accurate daily counts
+    for (let i = 0; i < props.rawData.length; i++) {
+      const msg = props.rawData[i]
+      const timestamp = msg.date || msg.timestamp
+      if (!timestamp) continue
 
-      // Take a sample of messages to speed up processing
-      const sampleSize = Math.min(10000, props.rawData.length)
-      const sampleInterval = Math.floor(props.rawData.length / sampleSize)
-      const sampledData = []
-
-      for (let i = 0; i < props.rawData.length; i += sampleInterval) {
-        sampledData.push(props.rawData[i])
+      let dateStr
+      if (typeof timestamp === 'string' && timestamp.length >= 10) {
+        dateStr = timestamp.substring(0, 10)
+      } else if (typeof timestamp === 'number') {
+        dateStr = new Date(timestamp < 10000000000 ? timestamp * 1000 : timestamp)
+          .toISOString().substring(0, 10)
+      } else {
+        continue
       }
 
-      console.log(`Processing ${sampledData.length} sampled messages (${Math.round(sampledData.length / props.rawData.length * 100)}% of total)`)
+      if (!dateStr || dateStr > today) continue
 
-      // Use Map for faster lookups
-      const messagesByDay = new Map()
-
-      sampledData.forEach(msg => {
-        // Extract date part (YYYY-MM-DD) from timestamp
-        const timestamp = msg.date || msg.timestamp
-        if (!timestamp) return
-
-        let dateStr
-        if (typeof timestamp === 'string') {
-          dateStr = timestamp.substring(0, 10)
-        } else if (typeof timestamp === 'number') {
-          dateStr = new Date(timestamp < 10000000000 ? timestamp * 1000 : timestamp)
-            .toISOString().substring(0, 10)
-        } else {
-          return
+      let day = messagesByDay.get(dateStr)
+      if (!day) {
+        day = {
+          date: dateStr,
+          count: 0,
+          messages: [],
+          senderCounts: new Map()
         }
-
-        if (!dateStr) return
-
-        // Update counters
-        if (!messagesByDay.has(dateStr)) {
-          messagesByDay.set(dateStr, {
-            date: dateStr,
-            count: 0,
-            messages: []
-          })
-        }
-
-        const day = messagesByDay.get(dateStr)
-        day.count++
-        // Only store up to 100 messages per day to save memory
-        if (day.messages.length < 100) {
-          day.messages.push(msg)
-        }
-      })
-
-      // Process the top days
-      const sortedDays = Array.from(messagesByDay.values())
-        .sort((a, b) => b.count - a.count)
-        .slice(0, 6)
-
-      // Scale counts to account for sampling
-      if (sampleInterval > 1) {
-        const scaleFactor = props.rawData.length / sampledData.length
-        sortedDays.forEach(day => {
-          day.count = Math.round(day.count * scaleFactor)
-        })
+        messagesByDay.set(dateStr, day)
       }
 
-      // For each top day, find top senders
-      topDays.value = sortedDays.map(day => {
-        // Count messages by sender
-        const senderCounts = {}
+      day.count++
 
-        day.messages.forEach(msg => {
-          const sender = msg.from || msg.sender || msg.sender_name || 'Unknown'
-          senderCounts[sender] = (senderCounts[sender] || 0) + 1
-        })
+      // Track sender counts efficiently
+      const sender = msg.from || msg.sender || msg.sender_name || 'Unknown'
+      day.senderCounts.set(
+        sender,
+        (day.senderCounts.get(sender) || 0) + 1
+      )
 
-        // Get top 3 senders
-        const topSenders = Object.entries(senderCounts)
-          .map(([name, count]) => ({ name, count }))
-          .sort((a, b) => b.count - a.count)
-          .slice(0, 3)
-
-        return {
-          date: day.date,
-          count: day.count,
-          topSenders
-        }
-      })
-    } else {
-      // For smaller datasets, use the original approach
-      console.log(`Processing ${props.rawData.length} messages to find top days...`)
-
-      // Group messages by day
-      const messagesByDay = {}
-
-      props.rawData.forEach(msg => {
-        // Extract date part (YYYY-MM-DD) from timestamp
-        const timestamp = msg.date || msg.timestamp
-        if (!timestamp) return
-
-        let dateStr
-        if (typeof timestamp === 'string') {
-          // If it's a string, take first 10 chars if it looks like ISO format
-          if (timestamp.length >= 10 && timestamp.includes('-')) {
-            dateStr = timestamp.substring(0, 10)
-          } else {
-            // Try to parse as date
-            const date = new Date(timestamp)
-            if (!isNaN(date.getTime())) {
-              dateStr = date.toISOString().substring(0, 10)
-            }
-          }
-        } else if (typeof timestamp === 'number') {
-          // If it's a number, convert to date
-          const date = new Date(timestamp < 10000000000 ? timestamp * 1000 : timestamp)
-          dateStr = date.toISOString().substring(0, 10)
-        }
-
-        if (!dateStr) return
-
-        // Count messages per day
-        if (!messagesByDay[dateStr]) {
-          messagesByDay[dateStr] = {
-            date: dateStr,
-            count: 0,
-            messages: []
-          }
-        }
-
-        messagesByDay[dateStr].count++
-        messagesByDay[dateStr].messages.push(msg)
-      })
-
-      // Sort days by message count and take top 6
-      const sortedDays = Object.values(messagesByDay)
-        .sort((a, b) => b.count - a.count)
-        .slice(0, 6)
-
-      console.log(`Found ${sortedDays.length} top message days`)
-
-      // For each top day, find top senders
-      topDays.value = sortedDays.map(day => {
-        // Count messages by sender
-        const senderCounts = {}
-
-        day.messages.forEach(msg => {
-          const sender = msg.from || msg.sender || msg.sender_name || 'Unknown'
-          senderCounts[sender] = (senderCounts[sender] || 0) + 1
-        })
-
-        // Get top 3 senders
-        const topSenders = Object.entries(senderCounts)
-          .map(([name, count]) => ({ name, count }))
-          .sort((a, b) => b.count - a.count)
-          .slice(0, 3)
-
-        return {
-          date: day.date,
-          count: day.count,
-          topSenders
-        }
-      })
+      // Only store first 3 messages per day since that's all we display
+      if (day.messages.length < 3) {
+        day.messages.push(msg)
+      }
     }
 
-    console.log('Processed top message days with sender info:', topDays.value)
+    // Convert to array and sort by count - only get top 6 immediately
+    const sortedDays = Array.from(messagesByDay.values())
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 6)
+      .map(day => {
+        // Convert sender counts Map to sorted array - only get top 3
+        const topSenders = Array.from(day.senderCounts.entries())
+          .sort((a, b) => b[1] - a[1])
+          .slice(0, 3)
+          .map(([name, count]) => ({ name, count }))
 
-    // Emit the top days to the parent component
-    emit('update:top-days', topDays.value)
+        return {
+          date: day.date,
+          count: day.count,
+          topSenders,
+          messages: day.messages
+        }
+      })
+
+    topDays.value = sortedDays
+    emit('update:top-days', sortedDays)
   } catch (err) {
     console.error('Error getting top message days:', err)
     error.value = err.message || 'Failed to get top message days'
@@ -256,14 +182,11 @@ function formatNumber(value) {
 
 // Format date in a readable way
 function formatDate(dateStr) {
-  // Parse YYYY-MM-DD into parts
-  const [year, month, day] = dateStr.split('-')
-  const months = ['January', 'February', 'March', 'April', 'May', 'June',
-    'July', 'August', 'September', 'October', 'November', 'December']
-  return `${months[parseInt(month) - 1]} ${parseInt(day)}, ${year}`
+  const date = parseISO(dateStr)
+  return format(date, 'MMMM d, yyyy')
 }
 
-// Get color for a sender
+// Get color for a sender using the shared color map
 function getSenderColor(senderName) {
   return colorMap.getSenderColor(senderName)
 }
@@ -281,8 +204,9 @@ function getDayColor(index) {
   return colors[index % colors.length]
 }
 
-onMounted(async () => {
+onMounted(() => {
   console.log(`TopMessageDays component mounted with ${props.rawData.length} messages`)
-  await getTopMessageDays()
+  // Call synchronously since it's fast now
+  getTopMessageDays()
 })
 </script>

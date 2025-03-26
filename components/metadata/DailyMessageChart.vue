@@ -2,10 +2,6 @@
   <div class="feltron-card p-6 rounded-lg">
     <div class="flex justify-between items-center mb-4">
       <div class="text-white text-2xl">{{ formatNumber(totalMessages) }} total messages</div>
-      <div class="flex items-center text-xs text-gray-400">
-        <div class="w-3 h-3 rounded-full bg-red-500 mr-1.5"></div>
-        <span>Top message days</span>
-      </div>
     </div>
     <div ref="chartContainer" class="w-full h-64"></div>
     <div v-if="selectedDay" class="mt-4 p-3 bg-gray-800 rounded text-white">
@@ -30,10 +26,6 @@ const props = defineProps({
   totalMessages: {
     type: Number,
     required: true
-  },
-  topMessageDays: {
-    type: Array,
-    default: () => []
   }
 })
 
@@ -70,7 +62,6 @@ function createDailyChart() {
   // Debug date parsing
   console.log('=== Chart Date Debug ===')
   console.log('Sample dates:', props.messagesPerDay.slice(0, 2))
-  console.log('Top message days:', props.topMessageDays)
 
   // Clear any existing chart
   d3.select(chartContainer.value).selectAll('*').remove()
@@ -127,26 +118,11 @@ function createDailyChart() {
     .attr('width', x.bandwidth())
     .attr('y', d => y(d.count))
     .attr('height', d => innerHeight - y(d.count))
-    .attr('fill', d => {
-      const isTopDay = props.topMessageDays.some(topDay => topDay.date === d.date)
-      return isTopDay ? 'rgba(239, 68, 68, 0.9)' : 'rgba(255, 255, 255, 0.5)'
-    })
+    .attr('fill', 'rgba(255, 255, 255, 0.5)')
     .style('cursor', 'pointer')
     .on('click', (event, d) => {
       selectedDay.value = d
     })
-
-  // Add labels for top message days
-  svg.selectAll('.top-day-label')
-    .data(props.topMessageDays)
-    .join('text')
-    .attr('class', 'top-day-label')
-    .attr('x', d => x(d.date) + x.bandwidth() / 2)
-    .attr('y', d => y(d.count) - 5)
-    .attr('text-anchor', 'middle')
-    .attr('fill', 'rgba(239, 68, 68, 0.9)')
-    .attr('font-size', '10px')
-    .text(d => formatShortDate(d.date))
 
   chart = svg
 }
@@ -159,10 +135,6 @@ function handleResize() {
 }
 
 watch(() => props.messagesPerDay, () => {
-  createDailyChart()
-}, { deep: true })
-
-watch(() => props.topMessageDays, () => {
   createDailyChart()
 }, { deep: true })
 

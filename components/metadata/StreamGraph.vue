@@ -126,7 +126,7 @@ const visibleLegendItems = computed(() => {
   return props.topSenders.slice(0, count).map(sender => ({
     name: sender.name,
     color: colorMap.getSenderColor(sender.name),
-    volume: sender.volume
+    volume: sender.count // Changed from 'volume' to 'count' to match props data structure
   }))
 })
 
@@ -191,6 +191,9 @@ function clearHighlight() {
 
 // Format numbers in a nice way (1k, 15k, etc.)
 function formatNumber(value) {
+  if (value === undefined || value === null || isNaN(value)) {
+    return '0';
+  }
   return d3.format('.2~s')(value)
     .replace('k', 'K')
     .replace('M', 'M')
@@ -239,65 +242,74 @@ function createStreamgraph() {
   const stack = d3.stack()
     .keys(keys)
     .offset(
-      streamLayout.value === 'wiggle' ? d3.stackOffsetWiggle :
+      streamLayout.value === 'wiggle' ? d3.stackOffsetSilhouette :
         streamLayout.value === 'fill' ? d3.stackOffsetExpand :
           d3.stackOffsetNone
     )
-    .order(
-      streamLayout.value === 'wiggle' ? d3.stackOrderInsideOut :
-        d3.stackOrderReverse
-    )
+    .order(d3.stackOrderNone)
 
+  // Create the stacked data
   const series = stack(data)
 
-  // Y scale
-  const y = d3.scaleLinear()
-    .domain(
-      streamLayout.value === 'wiggle'
-        ? [d3.min(series, d => d3.min(d, d => d[0])), d3.max(series, d => d3.max(d, d => d[1]))]
-        : streamLayout.value === 'fill'
-          ? [0, 1] // For fill mode, domain is always 0 to 1
-          : [0, d3.max(series, d => d3.max(d, d => d[1]))]
-    )
-    .range([innerHeight, 0])
-    .nice()
+  // Y scale - dynamic based on layout
+  const y = streamLayout.value === 'fill'
+    ? d3.scaleLinear()
+      .domain([0, 1])
+      .range([innerHeight, 0])
+    : d3.scaleLinear()
+      .domain([
+        d3.min(series, layer => d3.min(layer, d => d[0])),
+        d3.max(series, layer => d3.max(layer, d => d[1]))
+      ])
+      .range([innerHeight, 0])
+      .nice()
 
-  // Add X axis with better formatting
-  svg.append('g')
-    .attr('transform', `translate(0,${innerHeight})`)
-    .call(d3.axisBottom(x).ticks(5).tickFormat(d3.timeFormat('%b %Y')))
-    .attr('color', 'rgba(156, 163, 175, 0.6)')
-    .selectAll('text')
-    .style('text-anchor', 'middle')
-    .attr('fill', 'rgba(156, 163, 175, 0.8)')
-    .attr('font-size', '10px')
-
-  // Add Y axis for stacked and fill layouts
-  if (streamLayout.value === 'stack' || streamLayout.value === 'fill') {
-    const yAxis = d3.axisLeft(y).ticks(5)
-
-    // For fill mode, use percentage format
-    if (streamLayout.value === 'fill') {
-      yAxis.tickFormat(d => d3.format('.0%')(d))
-    } else {
-      yAxis.tickFormat(formatNumber)
-    }
-
-    svg.append('g')
-      .call(yAxis)
-      .attr('color', 'rgba(156, 163, 175, 0.6)')
-      .selectAll('text')
-      .attr('fill', 'rgba(156, 163, 175, 0.8)')
-      .attr('font-size', '10px')
-  }
-
-  // Create the area generator - use basis curve for smoother appearance
-  // Balance between performance and aesthetics
+  // Create the area generator
   const area = d3.area()
     .x(d => x(d.data.date))
     .y0(d => y(d[0]))
     .y1(d => y(d[1]))
-    .curve(d3.curveBasis) // Using basis curve for better aesthetics
+    .curve(d3.curveBasis)
+
+  // Add the areas
+  streamChart.value = svg.selectAll('path')
+    .data(series)
+    .join('path')
+    .attr('d', area)
+    .attr('fill', ({ key }) => color(key))
+    .attr('opacity', 0.8)
+    .attr('stroke', 'none')
+    .attr('stroke-width', 0)
+
+  // Add x-axis
+  const xAxis = d3.axisBottom(x)
+    .ticks(d3.timeMonth.every(4))
+    .tickFormat(d => format(d, 'MMM-yy'))
+
+  svg.append('g')
+    .attr('transform', `translate(0,${innerHeight})`)
+    .attr('class', 'x-axis')
+    .call(xAxis)
+    .call(g => g.select('.domain').remove())
+    .call(g => g.selectAll('.tick line').attr('stroke', '#374151'))
+    .call(g => g.selectAll('.tick text').attr('fill', '#9CA3AF'))
+
+  // Add y-axis for stacked layout only
+  if (streamLayout.value === 'stack') {
+    const yAxis = d3.axisLeft(y)
+      .ticks(5)
+      .tickFormat(d3.format('~s'))
+
+    svg.append('g')
+      .attr('class', 'y-axis')
+      .call(yAxis)
+      .call(g => g.select('.domain').remove())
+      .call(g => g.selectAll('.tick line')
+        .attr('x2', innerWidth)
+        .attr('stroke', '#374151')
+        .attr('stroke-dasharray', '2,2'))
+      .call(g => g.selectAll('.tick text').attr('fill', '#9CA3AF'))
+  }
 
   // Create tooltip
   const tooltip = d3.select('body').append('div')
@@ -343,12 +355,6 @@ function createStreamgraph() {
 
   // Add the areas with better interaction
   svg.selectAll('path.stream-area')
-    .data(series)
-    .join('path')
-    .attr('class', 'stream-area')
-    .attr('d', area)
-    .attr('fill', ({ key }) => color(key))
-    .attr('opacity', 0.8)
     .attr('data-sender', ({ key }) => key)
     .style('cursor', 'pointer')
     .on('mouseover', function (event, d) {
@@ -558,7 +564,7 @@ watch([width, height], () => {
 watch(() => props.messagesBySender, () => {
   createStreamgraph()
   createBrush()
-})
+}, { deep: true })
 
 onMounted(() => {
   createStreamgraph()
@@ -567,12 +573,15 @@ onMounted(() => {
 
 // Update the explanation text at the bottom based on layout
 const layoutExplanation = computed(() => {
-  if (streamLayout.value === 'wiggle') {
-    return 'Stream view highlights changes in messaging patterns over time'
-  } else if (streamLayout.value === 'stack') {
-    return 'Stacked view shows the total message volume by sender over time'
-  } else {
-    return 'Percentage view shows relative contribution of each sender'
+  switch (streamLayout.value) {
+    case 'wiggle':
+      return 'Stream view emphasizes patterns and trends over time'
+    case 'stack':
+      return 'Stacked view shows absolute message volumes'
+    case 'fill':
+      return 'Percentage view shows relative contributions'
+    default:
+      return ''
   }
 })
 </script>

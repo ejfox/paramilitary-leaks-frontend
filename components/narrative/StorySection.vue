@@ -4,43 +4,9 @@
       <h2 class="text-4xl sm:text-5xl font-bold mb-12 text-white text-center leading-tight backdrop-blur-sm py-4">The
         Man Behind the Leak</h2>
 
-      <!-- Audio player for narration -->
-      <div class="max-w-xl mx-auto mb-16">
-        <div class="bg-gray-800/80 backdrop-blur-md rounded-lg p-4 shadow-xl border border-gray-700/30">
-          <div class="flex items-center space-x-4">
-            <button @click="toggleAudio"
-              class="bg-blue-600 hover:bg-blue-700 text-white rounded-full w-12 h-12 flex items-center justify-center flex-shrink-0 transition-colors">
-              <svg v-if="!isPlaying" xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24"
-                stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                  d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                  d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-              <svg v-else xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24"
-                stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                  d="M10 9v6m4-6v6m7-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-            </button>
-
-            <div class="flex-1">
-              <div class="flex justify-between items-center mb-1">
-                <span class="text-sm text-white font-medium">The Infiltration: Williams' Story</span>
-                <span class="text-xs text-gray-400">{{ formatTime(currentTime) }} / {{ formatTime(duration) }}</span>
-              </div>
-              <div class="relative w-full h-2 bg-gray-700 rounded-full overflow-hidden cursor-pointer"
-                @click="seekAudio">
-                <div class="absolute top-0 left-0 h-full bg-blue-500 rounded-full"
-                  :style="{ width: `${(currentTime / duration) * 100}%` }"></div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
 
       <div
-        class="bg-gray-800/80 backdrop-blur-md p-8 rounded-xl mb-20 overflow-hidden shadow-2xl border border-gray-700/30">
+        class="bg-gray-800/10 backdrop-blur-md p-8 rounded-xl mb-20 overflow-hidden shadow-2xl border border-gray-700/30">
         <h3 class="text-2xl font-bold mb-8 text-white">John Williams' Infiltration</h3>
 
         <div class="prose prose-xl prose-invert mx-auto text-gray-200">
@@ -103,33 +69,16 @@
             members.
           </p>
 
-          <div class="my-10 pl-8 border-l-4 border-blue-500 italic bg-gray-900/70 p-4 rounded-r-lg">
+          <div class="mb-8 pl-8 border-l-4 border-blue-500 italic bg-gray-900/70 pt-4 rounded-r-lg">
             <p class="text-xl text-gray-300">"We're giving a 20 percent kickback to everyone," APIII founder Scot Seddon
               said
               in voice messages captured in the data. "Anybody that gets money coming through, donated to us, is going
               to receive 20 percent off the top. So if you raise ten thousand dollars, you're gonna get two grand and
               that's gonna go directly to you."</p>
-            <p class="text-2xl text-blue-400 mt-4">"I want us all to be fucking rich."</p>
+            <p class="text-4xl text-blue-400 pb-8">"I want us all to be fucking rich."</p>
           </div>
 
-          <p class="text-xl leading-relaxed">
-            While ACON was registered as a "domestic nonprofit corporation" in Pennsylvania, the data showed that it
-            repeatedly claimed on its website to be a federal 501(c)(3) tax-exempt organization: "ACON is a 501c3
-            organization. Donations are tax deductible." The leaked communications revealed this was a complete
-            fabrication. The militia even went so far as to create a fake federal Employer Identification Number (EIN)
-            to appear legitimate.
-          </p>
 
-          <div class="my-10 bg-gray-900/80 backdrop-blur-sm p-6 rounded-xl shadow-xl">
-            <h4 class="text-xl font-medium text-white mb-3">The Ammunition Raffle Scheme</h4>
-            <p class="text-gray-200 text-lg">
-              The leaked dataset exposed how APIII incentivized donations to their fake charity by running a raffle
-              where members could win 1000 rounds of 9mm ammunition. In a voice message found in the data, a militia
-              leader instructed: "You're gonna go to the acon.network site. ACON is our 501c3, and that is the web
-              page... On October 31, Tee and Rusky, or Scot, will announce the winner of the raffle, and you will get
-              the ammo mailed to you."
-            </p>
-          </div>
 
           <p class="text-xl leading-relaxed">
             But Williams' infiltration revealed much more than just financial schemes. His documentation showed how

@@ -1,10 +1,25 @@
 <template>
-  <div class="bg-gray-800 border-b border-gray-700 px-4 py-2 flex items-center justify-between">
+  <div class="bg-gray-800 border-b border-gray-700 px-4 py-2 flex items-center justify-between relative">
+    <!-- App Logo & Title -->
     <h1 class="text-white text-lg font-bold flex items-center">
       Paramilitary Leaks
       <span class="ml-2 text-xs text-gray-500 bg-gray-700 px-1.5 rounded">{{ version }}</span>
     </h1>
-    <div class="flex items-center overflow-x-auto whitespace-nowrap no-scrollbar">
+
+    <!-- Mobile hamburger menu button - only visible on mobile -->
+    <button @click="mobileMenuOpen = !mobileMenuOpen" class="md:hidden text-gray-300 hover:text-white p-1.5"
+      aria-label="Toggle navigation menu">
+      <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" viewBox="0 0 20 20" fill="currentColor">
+        <path fill-rule="evenodd"
+          :d="mobileMenuOpen
+            ? 'M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z'
+            : 'M3 5a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM3 10a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM3 15a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1z'"
+          clip-rule="evenodd" />
+      </svg>
+    </button>
+
+    <!-- Desktop Navigation Links - hidden on mobile -->
+    <div class="hidden md:flex items-center overflow-x-auto whitespace-nowrap no-scrollbar">
       <!-- Navigation Links -->
       <NuxtLink v-for="item in navItems" :key="item.path" :to="item.path"
         class="text-sm flex items-center transition-colors mx-2 first:ml-0 last:mr-0"
@@ -16,6 +31,39 @@
 
       <!-- Slot for additional links -->
       <slot name="additional-links"></slot>
+    </div>
+
+    <!-- Mobile Navigation Overlay - only visible when mobileMenuOpen is true -->
+    <div v-if="mobileMenuOpen" class="md:hidden fixed inset-0 bg-gray-900 bg-opacity-90 z-50 flex flex-col">
+      <!-- Close button -->
+      <div class="flex justify-end p-4">
+        <button @click="mobileMenuOpen = false" class="text-gray-300 hover:text-white p-1.5">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" viewBox="0 0 20 20" fill="currentColor">
+            <path fill-rule="evenodd"
+              d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"
+              clip-rule="evenodd" />
+          </svg>
+        </button>
+      </div>
+
+      <!-- Mobile Links -->
+      <div class="flex-1 flex flex-col justify-center px-4">
+        <div class="space-y-4">
+          <NuxtLink v-for="item in navItems" :key="item.path" :to="item.path"
+            class="flex items-center py-3 px-2 rounded-lg transition-colors"
+            :class="currentPage === item.title ? 'bg-blue-900 bg-opacity-50 text-blue-400 font-medium' : 'text-gray-300 hover:text-white hover:bg-gray-800'"
+            @click="mobileMenuOpen = false">
+            <!-- Icon -->
+            <span v-html="item.icon" class="h-5 w-5 mr-3"></span>
+            <span class="text-base">{{ item.title }}</span>
+          </NuxtLink>
+
+          <!-- Render additional links on mobile too -->
+          <div class="py-2 border-t border-gray-700 mt-4">
+            <slot name="additional-links"></slot>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 </template>
@@ -30,6 +78,9 @@ const props = defineProps({
     default: ''
   }
 })
+
+// Mobile menu state
+const mobileMenuOpen = ref(false)
 
 // Get version from composable
 const { versionWithPrefix: version } = useAppVersion()
@@ -93,5 +144,20 @@ const navItems = computed(() => [
 .no-scrollbar {
   -ms-overflow-style: none;
   scrollbar-width: none;
+}
+
+/* Add transition for mobile menu */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+.mobile-menu-animation {
+  animation: fadeIn 0.2s ease-out;
 }
 </style>

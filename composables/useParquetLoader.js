@@ -123,6 +123,19 @@ export function useParquetLoader() {
       const uint8Array = new Uint8Array(buffer)
       console.log(`Processing ${uint8Array.byteLength} bytes of parquet data`)
 
+      // Log sample of raw data to debug timestamp issues
+      try {
+        // Peek at the first few bytes to see if it's valid parquet format
+        console.log(
+          'First 16 bytes of parquet data (hex):',
+          Array.from(uint8Array.slice(0, 16))
+            .map((b) => b.toString(16).padStart(2, '0'))
+            .join(' ')
+        )
+      } catch (peekErr) {
+        console.warn('Error peeking at data bytes:', peekErr)
+      }
+
       // Step 3: Process the parquet file with more robust error handling
       try {
         console.log('Starting parquet file processing')
@@ -384,39 +397,36 @@ export function useParquetLoader() {
           columnNames.includes('timestamp') &&
           columnNames.includes('sender')
         ) {
-          console.log('Using timestamp + sender query')
+          console.log('Using timestamp + sender query with content')
           query = `
             SELECT 
               timestamp as date,
               COALESCE(sender, 'Unknown') as sender,
-              COUNT(*) as count
+              COALESCE(message, text, content, '') as content
             FROM messages
             WHERE timestamp IS NOT NULL
-            GROUP BY timestamp, COALESCE(sender, 'Unknown')
             ORDER BY timestamp ASC
           `
         } else if (
           columnNames.includes('date') &&
           columnNames.includes('from')
         ) {
-          console.log('Using date + from query')
+          console.log('Using date + from query with content')
           query = `
             SELECT 
               date,
               COALESCE("from", 'Unknown') as sender,
-              COUNT(*) as count
+              COALESCE(message, text, content, '') as content
             FROM messages
             WHERE date IS NOT NULL
-            GROUP BY date, COALESCE("from", 'Unknown')
             ORDER BY date ASC
           `
         } else {
           console.log('Using generic query - data schema not recognized')
-          // Generic query with error tolerance
+          // Generic query with error tolerance - REMOVED 5000 LIMIT
           query = `
             SELECT *
             FROM messages
-            LIMIT 5000
           `
         }
 
@@ -429,9 +439,9 @@ export function useParquetLoader() {
           console.error('Error executing customized query:', queryErr)
           console.warn('Attempting emergency fallback query')
 
-          // Try one last basic query that should work regardless of schema
+          // Try one last basic query that should work regardless of schema - REMOVED 5000 LIMIT
           result = await conn.query(`
-            SELECT * FROM messages LIMIT 5000
+            SELECT * FROM messages
           `)
           console.log('Emergency fallback query succeeded')
         }
