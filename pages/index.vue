@@ -1,8 +1,5 @@
 <template>
   <div class="min-h-screen w-screen bg-gray-900 flex flex-col overflow-hidden">
-    <!-- Global Filter Bar -->
-    <GlobalFilterBar @filters-changed="applyGlobalFilters" class="flex-shrink-0" />
-
     <!-- Navigation Bar -->
     <TopBar current-page="Timeline">
       <template #additional-links>
@@ -18,6 +15,9 @@
         </button>
       </template>
     </TopBar>
+
+    <!-- Global Filter Bar -->
+    <GlobalFilterBar @filters-changed="applyGlobalFilters" class="flex-shrink-0" />
 
     <div class="flex flex-1 overflow-hidden flex-col md:flex-row relative">
       <!-- Mobile overlay for sidebar - only visible when sidebar is shown on mobile -->
@@ -88,7 +88,7 @@
                     :style="{ backgroundColor: getSenderColor(getPointSender(hoveredPoint || selectedPoint)) }">
                   </div>
                   <div class="text-white text-base font-bold truncate">{{ getPointSender(hoveredPoint || selectedPoint)
-                    }}
+                  }}
                   </div>
                 </div>
                 <div class="flex items-center">

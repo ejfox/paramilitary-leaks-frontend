@@ -1,10 +1,8 @@
 <template>
   <div class="min-h-screen h-screen w-screen bg-gray-900 flex flex-col overflow-hidden">
     <!-- Header with navigation -->
-    <div class="relative">
-      <TopBar current-page="Message Feed" />
-      <GlobalFilterBar @filters-changed="applyGlobalFilters" />
-    </div>
+    <TopBar current-page="Message Feed" />
+    <GlobalFilterBar @filters-changed="applyGlobalFilters" />
 
     <!-- Toast notification for copy success -->
     <div v-if="showCopyToast"
@@ -334,7 +332,9 @@ const params = useUrlSearchParams('history', {
   initialValue: {
     sender: '',
     chat: '',
-    date: ''
+    date: '',
+    startDate: '',
+    endDate: ''
   },
   removeFalsyValues: true,
 })
@@ -351,24 +351,43 @@ const filters = reactive({
 // Sync URL params with filters
 watch(params, (newParams) => {
   let shouldApplyFilters = false
+  console.log('URL params changed:', newParams);
 
-  if (newParams.date !== filters.startDate) {
+  // Handle date parameter (single day selection)
+  if (newParams.date && newParams.date !== filters.startDate) {
+    console.log('Setting date filter from URL param:', newParams.date);
     filters.startDate = newParams.date || ''
     filters.endDate = newParams.date || ''
     shouldApplyFilters = true
   }
 
+  // Handle explicit date range parameters
+  if (newParams.startDate && newParams.startDate !== filters.startDate) {
+    console.log('Setting startDate filter from URL param:', newParams.startDate);
+    filters.startDate = newParams.startDate || ''
+    shouldApplyFilters = true
+  }
+
+  if (newParams.endDate && newParams.endDate !== filters.endDate) {
+    console.log('Setting endDate filter from URL param:', newParams.endDate);
+    filters.endDate = newParams.endDate || ''
+    shouldApplyFilters = true
+  }
+
   if (newParams.sender !== filters.sender) {
+    console.log('Setting sender filter from URL param:', newParams.sender);
     filters.sender = newParams.sender || ''
     shouldApplyFilters = true
   }
 
   if (newParams.chat !== filters.chat) {
+    console.log('Setting chat filter from URL param:', newParams.chat);
     filters.chat = newParams.chat || ''
     shouldApplyFilters = true
   }
 
   if (shouldApplyFilters && !loading.value) {
+    console.log('Applying filters based on URL params');
     applyFilters()
   }
 }, { deep: true })
@@ -376,7 +395,18 @@ watch(params, (newParams) => {
 // Sync filters back to URL params when filters change
 watch(filters, (newFilters) => {
   if (!loading.value) {
-    params.date = newFilters.startDate || undefined
+    // Use date for single-day selections
+    if (newFilters.startDate && newFilters.startDate === newFilters.endDate) {
+      params.date = newFilters.startDate || undefined
+      params.startDate = undefined
+      params.endDate = undefined
+    } else {
+      // Use startDate and endDate for date ranges
+      params.date = undefined
+      params.startDate = newFilters.startDate || undefined
+      params.endDate = newFilters.endDate || undefined
+    }
+
     params.sender = newFilters.sender || undefined
     params.chat = newFilters.chat || undefined
   }
@@ -1076,11 +1106,13 @@ const messagesByDate = computed(() => {
   return result;
 });
 
-// Handle date range updates from the histogram
-function handleDateRangeUpdate(range) {
-  if (range) {
-    filters.startDate = range.startDate || '';
-    filters.endDate = range.endDate || '';
+// Update this function to handle date range updates properly
+function handleDateRangeUpdate(newRange) {
+  console.log('Date range updated from histogram:', newRange);
+
+  if (newRange.startDate !== filters.startDate || newRange.endDate !== filters.endDate) {
+    filters.startDate = newRange.startDate;
+    filters.endDate = newRange.endDate;
     applyFilters();
   }
 }
@@ -1108,61 +1140,145 @@ watch(() => filters.sender, (newVal, oldVal) => {
   }
 }, { immediate: true });
 
+// Add this method to initialize filters from route on page load
+async function initializeFromRouteParams() {
+  // Initialize filter values from route parameters
+  const queryParams = route.query;
+  console.log('Initializing from route params:', queryParams);
+
+  let paramsFound = false;
+
+  if (queryParams.date) {
+    filters.startDate = queryParams.date;
+    filters.endDate = queryParams.date;
+    paramsFound = true;
+  }
+
+  if (queryParams.startDate) {
+    filters.startDate = queryParams.startDate;
+    paramsFound = true;
+  }
+
+  if (queryParams.endDate) {
+    filters.endDate = queryParams.endDate;
+    paramsFound = true;
+  }
+
+  if (queryParams.sender) {
+    filters.sender = queryParams.sender;
+    paramsFound = true;
+  }
+
+  if (queryParams.chat) {
+    filters.chat = queryParams.chat;
+    paramsFound = true;
+  }
+
+  // Update date range for the histogram
+  if (filters.startDate) {
+    dateRange.startDate = filters.startDate;
+  }
+
+  if (filters.endDate) {
+    dateRange.endDate = filters.endDate;
+  }
+
+  console.log('Initialized filters:', filters);
+  return paramsFound;
+}
+
+// Load data
+async function loadData() {
+  loading.value = true;
+  error.value = null;
+
+  try {
+    console.log('Loading parquet data...');
+    const result = await loadParquetFile();
+
+    if (!result || !result.success) {
+      throw new Error(result?.error || 'Failed to load data');
+    }
+
+    console.log(`Successfully loaded ${result.data.length} messages`);
+
+    // Sort by timestamp (newest first by default)
+    const sorted = [...result.data].sort((a, b) => {
+      const aDate = new Date(a.date || a.timestamp);
+      const bDate = new Date(b.date || b.timestamp);
+      return sortOrder.value === 'newest' ? (bDate - aDate) : (aDate - bDate);
+    });
+
+    rawData.value = sorted;
+
+    // Check if we need to apply filters from URL params
+    const hasParams = await initializeFromRouteParams();
+
+    if (hasParams) {
+      console.log('Applying filters from URL params');
+      applyFilters();
+    } else {
+      console.log('No URL params, showing all messages');
+      filteredMessages.value = sorted;
+    }
+
+    // Calculate stats
+    calculateStats(result.data);
+
+    // Group messages by date for the histogram
+    generateMessagesByDate();
+  } catch (err) {
+    console.error('Error loading data:', err);
+    error.value = err.message || 'Failed to load data';
+    rawData.value = [];
+    filteredMessages.value = [];
+  } finally {
+    loading.value = false;
+  }
+}
+
+// Generate the date histogram data
+function generateMessagesByDate() {
+  console.log('Generating messages by date...');
+
+  // Group by date
+  const groupedByDate = {};
+
+  rawData.value.forEach(msg => {
+    const timestamp = getPointTimestamp(msg);
+    if (!timestamp) return;
+
+    // Format to YYYY-MM-DD
+    let dateStr;
+    try {
+      const date = new Date(timestamp);
+      dateStr = date.toISOString().split('T')[0];
+    } catch (err) {
+      return; // Skip invalid dates
+    }
+
+    if (!groupedByDate[dateStr]) {
+      groupedByDate[dateStr] = { date: dateStr, count: 0 };
+    }
+
+    groupedByDate[dateStr].count++;
+  });
+
+  // Convert to array and sort by date
+  const dateArray = Object.values(groupedByDate).sort((a, b) => a.date.localeCompare(b.date));
+
+  messagesByDate.value = dateArray;
+  console.log(`Generated ${dateArray.length} date entries for histogram`);
+}
+
 // Apply URL query parameters when the component mounts
 onMounted(async () => {
-  try {
-    console.log('Loading parquet data from R2...')
+  // Load data first
+  await loadData();
 
-    const result = await loadParquetFile()
-
-    if (!result.success) {
-      throw new Error(result.error || 'Failed to load data from R2')
-    }
-
-    console.log(`Loaded ${result.data.length} rows from R2`)
-
-    rawData.value = result.data
-
-    // Use VueUse params instead of manually parsing URL
-    if (params.date) {
-      console.log('Found date param:', params.date)
-      filters.startDate = params.date
-      filters.endDate = params.date
-    }
-
-    if (params.sender) {
-      console.log('Found sender param:', params.sender)
-      filters.sender = params.sender
-    }
-
-    if (params.chat) {
-      console.log('Found chat param:', params.chat)
-      filters.chat = params.chat
-    }
-
-    // Sort by timestamp (newest first)
-    const sorted = [...result.data].sort((a, b) => {
-      return new Date(getPointTimestamp(b)) - new Date(getPointTimestamp(a))
-    })
-
-    filteredMessages.value = sorted
-    calculateStats(result.data)
-
-    // Apply filters if any parameters were found
-    if (params.date || params.sender || params.chat) {
-      applyFilters()
-    }
-
-    loading.value = false
-
-    // Add keyboard event listener
-    window.addEventListener('keydown', handleKeyDown)
-  } catch (err) {
-    console.error('Init error:', err)
-    error.value = err.message
-    loading.value = false
-  }
-})
+  // Set up keyboard shortcuts
+  window.addEventListener('keydown', handleKeyDown);
+});
 
 onUnmounted(() => {
   // Remove keyboard event listener

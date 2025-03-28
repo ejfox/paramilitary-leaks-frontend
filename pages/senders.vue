@@ -1,8 +1,6 @@
 <template>
   <div class="min-h-screen h-screen w-screen bg-gray-900 text-white flex flex-col">
-    <div class="relative">
-      <TopBar current-page="Senders" />
-    </div>
+    <TopBar current-page="Senders" />
 
     <!-- Toast notification for copy success -->
     <div v-if="showCopyToast"
@@ -21,7 +19,7 @@
     <div class="flex-1 overflow-auto px-4 py-6">
       <div class="mb-6 flex items-center justify-between">
         <h1 class="text-xl font-bold">Message Senders</h1>
-        
+
         <!-- Search -->
         <div class="flex">
           <input v-model="searchQuery" type="text" placeholder="Search senders..."
@@ -71,14 +69,14 @@
         <!-- Simple Senders List -->
         <div class="border-t border-gray-700 pt-2">
           <div class="text-gray-400 text-xs uppercase tracking-wider mb-1">All Senders</div>
-          
+
           <!-- No results state -->
           <div v-if="filteredSenders.length === 0" class="py-4 text-center text-gray-400 text-sm">
             No senders match your search query
           </div>
-          
+
           <div v-else class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
-            <div v-for="(sender, index) in filteredSenders" :key="index" 
+            <div v-for="(sender, index) in filteredSenders" :key="index"
               class="flex items-center justify-between py-1 px-2 border-b border-gray-800 hover:bg-gray-800">
               <div class="flex items-center">
                 <div class="w-2 h-2 rounded-full mr-2" :style="{ backgroundColor: getSenderColor(sender.name) }"></div>
@@ -87,18 +85,22 @@
               </div>
               <div class="flex items-center space-x-2">
                 <!-- Shareable link to this sender search -->
-                <button @click="setSenderSearch(sender.name)" 
+                <button @click="setSenderSearch(sender.name)"
                   class="text-gray-400 hover:text-blue-400 transition-colors text-xs" title="Copy link to this sender">
-                  <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" fill="none" viewBox="0 0 24 24"
+                    stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                      d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
                   </svg>
                 </button>
                 <!-- View messages -->
                 <NuxtLink :to="`/feed?sender=${encodeURIComponent(sender.name)}`"
                   class="text-blue-400 hover:text-blue-300 transition-colors text-xs flex items-center">
                   View Messages
-                  <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3 ml-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3 ml-1" fill="none" viewBox="0 0 24 24"
+                    stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                      d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
                   </svg>
                 </NuxtLink>
               </div>
@@ -203,17 +205,17 @@ function getSenderColor(name) {
 function setSenderSearch(senderName) {
   // Set the search query which will update the URL via the watcher
   searchQuery.value = senderName
-  
+
   // Generate the shareable URL with VueUse automatically handling encoding
   const url = window.location.href
-  
+
   // Copy to clipboard
   navigator.clipboard.writeText(url)
     .then(() => {
       // Show a toast notification that the link was copied
       showCopyToast.value = true
       copyToastMessage.value = `Link to "${senderName}" copied to clipboard`
-      
+
       // Automatically hide toast after 3 seconds
       setTimeout(() => {
         showCopyToast.value = false
@@ -223,7 +225,7 @@ function setSenderSearch(senderName) {
       console.error('Failed to copy link:', err)
       showCopyToast.value = true
       copyToastMessage.value = 'Could not copy link automatically. Use the URL in your browser address bar.'
-      
+
       // Automatically hide toast after 4 seconds (longer for error messages)
       setTimeout(() => {
         showCopyToast.value = false
@@ -311,7 +313,14 @@ onMounted(async () => {
 }
 
 @keyframes fadeIn {
-  from { opacity: 0; transform: translateY(10px); }
-  to { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 </style>

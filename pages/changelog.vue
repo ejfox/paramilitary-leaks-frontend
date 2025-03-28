@@ -1,19 +1,17 @@
 <template>
   <div class="min-h-screen h-screen w-screen bg-gray-900 flex flex-col">
     <!-- Navigation Bar -->
-    <div class="relative">
-      <TopBar current-page="Changelog" />
-    </div>
+    <TopBar current-page="Changelog" />
 
     <div class="flex-1 overflow-auto px-4 py-6">
       <div class="max-w-5xl mx-auto w-full">
         <div class="mb-6 flex items-center justify-between">
           <h1 class="text-xl font-bold text-white">
-            Changelog 
+            Changelog
             <span class="text-sm text-gray-400 ml-2">{{ version }}</span>
           </h1>
         </div>
-        
+
         <div v-if="loading" class="flex items-center justify-center py-12">
           <div class="flex items-center">
             <div class="animate-spin mr-3">
@@ -56,20 +54,20 @@ const { versionWithPrefix: version } = useAppVersion()
 async function fetchChangelog() {
   try {
     console.log('Fetching changelog from public directory...')
-    
+
     // Attempt to fetch the changelog from public directory
     const response = await fetch('/CHANGELOG.md')
-    
+
     if (!response.ok) {
       throw new Error(`Failed to fetch changelog: ${response.status} ${response.statusText}`)
     }
-    
+
     console.log('Changelog loaded successfully')
     const markdownContent = await response.text()
-    
+
     // Log the first 100 chars to see if we got content
     console.log('Changelog content preview:', markdownContent.slice(0, 100))
-    
+
     // Parse markdown to HTML
     changelogHtml.value = marked.parse(markdownContent)
     loading.value = false
@@ -87,7 +85,8 @@ onMounted(() => {
 
 <style scoped>
 .changelog-content {
-  color: rgba(209, 213, 219, 1); /* Base text color - lighter gray */
+  color: rgba(209, 213, 219, 1);
+  /* Base text color - lighter gray */
 }
 
 .changelog-content :deep(h1) {
@@ -134,18 +133,21 @@ onMounted(() => {
   content: "•";
   position: absolute;
   left: 0;
-  color: rgba(96, 165, 250, 1); /* blue-400 */
+  color: rgba(96, 165, 250, 1);
+  /* blue-400 */
 }
 
 .changelog-content :deep(a) {
-  color: rgba(96, 165, 250, 1); /* blue-400 */
+  color: rgba(96, 165, 250, 1);
+  /* blue-400 */
   text-decoration: none;
   transition: all 0.2s;
   border-bottom: 1px solid transparent;
 }
 
 .changelog-content :deep(a:hover) {
-  color: rgba(147, 197, 253, 1); /* blue-300 */
+  color: rgba(147, 197, 253, 1);
+  /* blue-300 */
   border-bottom-color: currentColor;
 }
 
@@ -166,8 +168,10 @@ onMounted(() => {
 .changelog-content :deep(code) {
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
   font-size: 0.875rem;
-  color: rgba(147, 197, 253, 1); /* blue-300 */
-  background: rgba(30, 58, 138, 0.3); /* blue-900 with opacity */
+  color: rgba(147, 197, 253, 1);
+  /* blue-300 */
+  background: rgba(30, 58, 138, 0.3);
+  /* blue-900 with opacity */
   padding: 0.2rem 0.4rem;
   border-radius: 0.25rem;
 }
@@ -179,7 +183,8 @@ onMounted(() => {
 
 /* Style the Unreleased section differently */
 .changelog-content :deep(h2:first-of-type) {
-  color: rgba(110, 231, 183, 1); /* emerald-300 */
+  color: rgba(110, 231, 183, 1);
+  /* emerald-300 */
   font-weight: 700;
 }
 
