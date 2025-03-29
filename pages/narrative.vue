@@ -32,7 +32,7 @@
     <StatsSection ref="statsSection" :rawData="rawData" :messagesBySender="messagesBySender" :allSenders="allSenders"
       :totalFileSize="totalFileSize" @update:top-days="handleTopDaysUpdate" />
 
-
+    <!-- Source information section -->
     <section class="bg-black py-20 relative z-10">
       <div class="container mx-auto px-4">
         <h2 class="text-4xl font-bold mb-8 text-white">Exploring the Paramilitary Leaks</h2>
@@ -61,7 +61,6 @@
       </div>
     </section>
 
-
     <!-- Story section -->
     <section ref="storyContainer" class="relative w-full bg-gray-950">
       <!-- Story content -->
@@ -71,16 +70,48 @@
 
       <!-- Visualization integrated directly in the narrative flow -->
       <div class="container mx-auto py-20">
-        <h2 class="text-4xl font-bold mb-8 text-white text-center">Visualizing the Network</h2>
+        <h2 class="text-4xl font-bold mb-8 text-white text-center">Communication Patterns Over Time</h2>
         <p class="text-xl text-gray-300 max-w-3xl mx-auto mb-10 text-center">
-          A visual representation of the communication patterns within the paramilitary groups
+          The ebb and flow of messages within paramilitary groups reveals coordination patterns and key moments of
+          heightened activity
         </p>
-        <div class="bg-gray-900 p-6 rounded-lg shadow-lg mx-auto max-w-5xl">
-          <NarrativeScatterplot v-if="rawData.length > 0" :data="visibleDataPoints" :getSenderFn="getMessageSender"
-            :zoomLevel="1.2" :height="500" class="w-full" />
-          <div class="mt-4 text-sm text-gray-400 text-center">
-            Each point represents a message sender in the network. The visualization shows common communication
-            patterns.
+
+        <!-- Main StreamGraph -->
+        <div class="bg-gray-900 p-6 rounded-lg shadow-lg mx-auto mb-12">
+          <h3 class="text-2xl font-bold mb-4 text-white">Overall Communication Activity</h3>
+          <StreamGraph v-if="messagesBySender.length > 0" :messagesBySender="messagesBySender"
+            :topSenders="allSendersExtended" class="w-full" style="min-height: 60vh" />
+          <div v-else class="h-96 flex items-center justify-center">
+            <div class="text-gray-400 flex flex-col items-center">
+              <svg class="animate-spin mb-4 h-8 w-8 text-blue-500" xmlns="http://www.w3.org/2000/svg" fill="none"
+                viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                <path class="opacity-75" fill="currentColor"
+                  d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z">
+                </path>
+              </svg>
+              <span>Loading data visualization...</span>
+            </div>
+          </div>
+          <div class="mt-6 text-sm text-gray-400 text-center">
+            This visualization shows communication patterns for the top 100 most active members of the paramilitary
+            groups from May 2021 to May 2023, covering the period of highest activity.
+          </div>
+        </div>
+
+        <!-- Explanation and Context -->
+        <div class="bg-gray-900/50 p-6 rounded-lg shadow-lg max-w-4xl mx-auto">
+          <h3 class="text-xl font-semibold mb-4 text-white">Understanding the Visualizations</h3>
+          <div class="text-gray-300 space-y-4 text-sm">
+            <p>
+              These streamgraphs reveal communication patterns over time, with the thickness indicating message volume.
+              Visible spikes often indicate planning coordination, events, or responses to external triggers.
+            </p>
+            <p>
+              The most active communicators often coordinated militia activities, recruitment, and training.
+              Notice how communication ebbs and flows, with periods of heightened activity around significant political
+              events.
+            </p>
           </div>
         </div>
       </div>
@@ -200,7 +231,7 @@ import HeroSection from '~/components/narrative/HeroSection.vue'
 import VideoSection from '~/components/narrative/VideoSection.vue'
 import StatsSection from '~/components/narrative/StatsSection.vue'
 import StorySection from '~/components/narrative/StorySection.vue'
-import NarrativeScatterplot from '~/components/narrative/NarrativeScatterplot.vue'
+import StreamGraph from '~/components/metadata/StreamGraph.vue'
 
 // State variables - define ALL refs at the top of the component
 const loading = ref(true)
@@ -347,8 +378,33 @@ const allSenders = computed(() => {
   return Object.entries(senderCounts)
     .map(([name, count]) => ({ name, count }))
     .sort((a, b) => b.count - a.count)
-    .slice(0, 10) // Limit to top 10 senders for performance
+    .slice(0, 100) // Increased from 10 to 100 senders for better representation
 })
+
+// Create an extended version of allSenders with colors for StreamGraph
+const allSendersExtended = computed(() => {
+  return allSenders.value.map(sender => ({
+    ...sender,
+    color: colorMap.getSenderColor(sender.name)
+  }))
+})
+
+// Get stream data for a specific sender
+function getSenderStreamData(senderName) {
+  if (!messagesBySender.value || messagesBySender.value.length === 0) return []
+
+  // Create a filtered dataset that only includes date and the specific sender
+  return messagesBySender.value.map(weekData => {
+    const filteredData = { date: weekData.date }
+    // Only include the specified sender's data
+    if (senderName in weekData) {
+      filteredData[senderName] = weekData[senderName]
+    } else {
+      filteredData[senderName] = 0 // Ensure the sender has a value even if 0
+    }
+    return filteredData
+  })
+}
 
 // Handle top days update
 function handleTopDaysUpdate(days) {
@@ -433,8 +489,18 @@ async function loadDataAndVisualization() {
 function processDataForStreamgraph(data) {
   if (!data || !data.length) return []
 
+  // Filter data to specific date range (May 2021 to May 2023) for narrative page
+  const startDate = new Date('2021-05-01')
+  const endDate = new Date('2023-05-31')
+
+  // Filter data by date range
+  const filteredData = data.filter(d => {
+    const timestamp = getMessageTimestamp(d)
+    return timestamp && timestamp >= startDate && timestamp <= endDate
+  })
+
   // First, determine the time intervals (use weeks instead of months for more detail)
-  const timestamps = data.map(d => new Date(getMessageTimestamp(d)))
+  const timestamps = filteredData.map(d => new Date(getMessageTimestamp(d)))
   const timeExtent = d3.extent(timestamps)
 
   // Create an array of week intervals for more granular visualization
@@ -449,7 +515,7 @@ function processDataForStreamgraph(data) {
 
   // Get all senders (limited to top senders)
   const senderCounts = {}
-  data.forEach(msg => {
+  filteredData.forEach(msg => {
     const sender = getMessageSender(msg)
     senderCounts[sender] = (senderCounts[sender] || 0) + 1
   })
@@ -457,11 +523,11 @@ function processDataForStreamgraph(data) {
   // Sort by count and get top senders
   const topSenderNames = Object.entries(senderCounts)
     .sort((a, b) => b[1] - a[1])
-    .slice(0, 10) // Limit to top 10 for performance
+    .slice(0, 100) // Increased from 10 to 100 for better visualization
     .map(([name]) => name)
 
   // Group messages by week and sender
-  const nestedData = d3.groups(data,
+  const nestedData = d3.groups(filteredData,
     d => d3.timeFormat('%Y-%U')(new Date(getMessageTimestamp(d))), // Use ISO week format
     d => getMessageSender(d)
   )
@@ -545,6 +611,23 @@ function getMessageTimestamp(message) {
   }
 
   return null;
+}
+
+// Get color for a sender from the colorMap
+function getSenderColor(senderName) {
+  return colorMap.getSenderColor(senderName)
+}
+
+// Format numbers in a nice way (1k, 15k, etc.)
+function formatNumber(value) {
+  if (value === undefined || value === null || isNaN(value)) {
+    return '0';
+  }
+  return d3.format('.2~s')(value)
+    .replace('k', 'K')
+    .replace('M', 'M')
+    .replace('G', 'B')
+    .replace('.0', '');
 }
 
 // Store variables needed for top message days component

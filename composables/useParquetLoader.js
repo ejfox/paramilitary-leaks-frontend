@@ -45,6 +45,7 @@ export function useParquetLoader() {
         // Handle worker errors
         worker.onerror = (e) => {
           console.error('DuckDB worker error:', e)
+          isInitializing = false // Reset flag on error
           reject(new Error(`DuckDB worker error: ${e.message}`))
         }
 
@@ -59,40 +60,109 @@ export function useParquetLoader() {
         // Add a timeout to handle potential hanging
         const timeoutPromise = new Promise((_, timeoutReject) => {
           setTimeout(
-            () =>
+            () => {
+              console.error('DuckDB instantiation timed out')
+              isInitializing = false // Reset flag on timeout
               timeoutReject(
                 new Error('DuckDB instantiation timed out after 30 seconds')
-              ),
-            30000
+              )
+            },
+            30000 // Increased from 15s to 30s to allow more time for instantiation
           )
         })
 
-        await Promise.race([instantiatePromise, timeoutPromise])
-        console.log('DuckDB instantiated successfully')
+        try {
+          await Promise.race([instantiatePromise, timeoutPromise])
+          console.log('DuckDB instantiated successfully')
+        } catch (err) {
+          console.error('DuckDB instantiation failed:', err)
+          isInitializing = false
+          worker.terminate() // Clean up the worker
+          reject(err)
+          return // Exit early
+        }
 
-        // Connect to database
+        // Connect to database with timeout
         console.log('Connecting to DuckDB...')
-        const conn = await db.connect()
-        console.log('Connected to DuckDB successfully')
+        let conn
+        try {
+          const connectPromise = db.connect()
+          const connectTimeout = new Promise((_, timeoutReject) => {
+            setTimeout(() => {
+              console.error('DuckDB connection timed out')
+              timeoutReject(
+                new Error('DuckDB connection timed out after 15 seconds')
+              )
+            }, 15000) // Increased from 5s to 15s
+          })
 
-        // Test connection with simple query
-        await conn.query('SELECT 1 AS test')
-        console.log('DuckDB test query successful')
+          conn = await Promise.race([connectPromise, connectTimeout])
+          console.log('Connected to DuckDB successfully')
+        } catch (err) {
+          console.error('DuckDB connection failed:', err)
+          isInitializing = false
+          if (db) {
+            try {
+              await db.terminate()
+            } catch (termErr) {
+              console.warn(
+                'Failed to terminate DB after connection error:',
+                termErr
+              )
+            }
+          }
+          if (worker) worker.terminate()
+          reject(err)
+          return // Exit early
+        }
+
+        // Test connection with simple query and timeout
+        try {
+          const testPromise = conn.query('SELECT 1 AS test')
+          const testTimeout = new Promise((_, timeoutReject) => {
+            setTimeout(
+              () => timeoutReject(new Error('DuckDB test query timed out')),
+              15000 // Increased from 5s to 15s
+            )
+          })
+
+          await Promise.race([testPromise, testTimeout])
+          console.log('DuckDB test query successful')
+        } catch (err) {
+          console.error('DuckDB test query failed:', err)
+          isInitializing = false
+          try {
+            await conn.close()
+          } catch (closeErr) {
+            console.warn(
+              'Error closing connection after test failure:',
+              closeErr
+            )
+          }
+          try {
+            await db.terminate()
+          } catch (termErr) {
+            console.warn('Error terminating DB after test failure:', termErr)
+          }
+          worker.terminate()
+          reject(err)
+          return
+        }
 
         // Save instances to our module-level variables
         duckdbInstance = db
         duckdbConnection = conn
 
         console.log('DuckDB initialization complete')
+        isInitializing = false
         resolve({ instance: db, connection: conn })
       } catch (err) {
         console.error('Error initializing DuckDB:', err)
         // Reset state so we can try again
         duckdbInstance = null
         duckdbConnection = null
-        reject(err)
-      } finally {
         isInitializing = false
+        reject(err)
       }
     })
 

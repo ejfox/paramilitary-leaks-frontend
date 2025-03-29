@@ -89,15 +89,15 @@ function safeInitialize() {
       return
     }
 
-    // Configure the scatterplot with appropriate options
+    // Configure the scatterplot with appropriate options - match the main app styling
     const options = {
       width: container.offsetWidth,
       height: container.offsetHeight,
-      pointSize: 3,
+      pointSize: 1.5,
       pointSizeSelected: 5,
-      opacity: 0.8,
+      opacity: 0.92,
       colorBy: 'category',
-      backgroundColor: [0.08, 0.08, 0.12, 1],
+      backgroundColor: [0.1, 0.1, 0.1, 1],
       // Disable zooming and panning with mouse/touch
       enableZooming: false,
       enablePanning: false,
@@ -105,9 +105,9 @@ function safeInitialize() {
       aspectRatio: container.offsetWidth / container.offsetHeight,
       // Better color blending
       pointColorMixMode: 'multiply',
-      // Create visual interest with variation
-      scatterPointSizeBoundaries: [2, 8],
-      scatterPointSizeExponent: 0.5
+      pointOutlineWidth: 2,
+      pointOutlineColor: [1, 1, 1, 1],
+      opacityInactiveScale: 0.3
     };
 
     // Initialize the scatterplot
@@ -119,8 +119,8 @@ function safeInitialize() {
 
     // Transform data after initialization if available
     if (props.data && props.data.length) {
-      const dataToRender = props.data.slice(0, 5000); // Limit points for performance
-      transformData(dataToRender)
+      // Use the same transform approach as the main app
+      transformData(props.data)
 
       // Apply zoom level based on prop
       if (scatterplot && props.zoomLevel !== 1) {
@@ -137,29 +137,6 @@ function safeInitialize() {
     error.value = err.message || 'Failed to initialize visualization'
     setTimeout(safeInitialize, 1000)
   }
-}
-
-// Apply jitter to data for better visual distribution
-function addJitterToData(data) {
-  return data.map((point, index) => {
-    // Create a copy to avoid modifying original data
-    const newPoint = { ...point };
-
-    // Calculate position using a grid-like layout with jitter
-    const pointsPerRow = Math.ceil(Math.sqrt(data.length));
-    const row = Math.floor(index / pointsPerRow);
-    const col = index % pointsPerRow;
-
-    // Add slight randomness for visual interest
-    const jitterX = (Math.random() - 0.5) * 0.5;
-    const jitterY = (Math.random() - 0.5) * 0.5;
-
-    // Calculate position
-    newPoint.x = (col - pointsPerRow / 2) + jitterX;
-    newPoint.y = (row - Math.floor(data.length / pointsPerRow) / 2) + jitterY;
-
-    return newPoint;
-  });
 }
 
 // Set up the component
@@ -191,9 +168,9 @@ watch(() => props.data, (newData) => {
   if (!isInitialized.value || !mounted.value || !newData?.length) return
 
   try {
-    // Apply jitter and transform data
-    const jitteredData = addJitterToData(newData.slice(0, 5000));
-    transformData(jitteredData);
+    // Use the standard transformData function without custom jitter
+    // This will place points according to timestamp and time of day like in the main app
+    transformData(newData);
 
     // Apply zoom level
     if (scatterplot && props.zoomLevel !== 1) {

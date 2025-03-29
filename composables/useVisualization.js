@@ -196,28 +196,35 @@ export function useVisualization() {
       }
 
       const rect = container.getBoundingClientRect()
-      const width = rect.width || 300 // Fallback width
-      const height = rect.height || 200 // Fallback height
+      // Ensure we have non-zero dimensions
+      const width = Math.max(rect.width || 300, 50) // Minimum width of 50px
+      const height = Math.max(rect.height || 200, 50) // Minimum height of 50px
 
       console.log(
         `Initializing scatterplot with dimensions: ${width}x${height}`
       )
 
-      // Set canvas dimensions explicitly
+      // Set canvas dimensions explicitly with both attribute and style properties
+      // This is critical for iOS Safari
       canvas.value.width = width
       canvas.value.height = height
       canvas.value.style.width = width + 'px'
       canvas.value.style.height = height + 'px'
 
-      // Default options
+      // Force the container to have explicit dimensions too (helps on iOS)
+      container.style.width = width + 'px'
+      container.style.height = height + 'px'
+      container.style.position = 'relative'
+
+      // Default options with iOS-friendly settings
       const defaultOptions = {
         canvas: canvas.value,
         width,
         height,
-        pointSize: 1.5,
+        pointSize: 1.8, // Slightly larger points for mobile
         opacity: 0.92,
         backgroundColor: [0.1, 0.1, 0.1, 1],
-        pointSizeSelected: 5,
+        pointSizeSelected: 6, // Larger selected points for mobile
         pointOutlineWidth: 2,
         pointOutlineColor: [1, 1, 1, 1],
         opacityInactiveScale: 0.3,
@@ -227,7 +234,19 @@ export function useVisualization() {
         lassoMinDist: 0.001,
         enableLasso: true,
         // Use shift key for lasso selection
-        actionKeyMap: { lasso: 'shift' }
+        actionKeyMap: { lasso: 'shift' },
+        // Add WebGL context attributes for better compatibility
+        contextAttributes: {
+          alpha: true,
+          antialias: true,
+          preserveDrawingBuffer: true,
+          // Add these for better iOS support
+          powerPreference: 'default',
+          premultipliedAlpha: false,
+          depth: true,
+          stencil: false,
+          failIfMajorPerformanceCaveat: false
+        }
       }
 
       // Merge default options with custom options
@@ -235,6 +254,19 @@ export function useVisualization() {
 
       // Create scatterplot with the specified configuration
       scatterplot = createScatterplot(finalOptions)
+
+      // iOS Safari sometimes needs a bit more time to initialize WebGL
+      // Force a redraw after a short delay
+      setTimeout(() => {
+        if (scatterplot) {
+          try {
+            scatterplot.refresh()
+            console.log('Forced refresh of scatterplot after delay')
+          } catch (e) {
+            console.warn('Error during forced refresh:', e)
+          }
+        }
+      }, 100)
 
       // Make the scatterplot accessible globally for debugging
       if (typeof window !== 'undefined') {
@@ -315,6 +347,143 @@ export function useVisualization() {
       return true
     } catch (err) {
       console.error('Fatal error initializing scatterplot:', err)
+
+      // Try fallback visualization if we have data
+      if (allData && allData.length > 0) {
+        return createFallbackVisualization()
+      }
+
+      return false
+    }
+  }
+
+  function createFallbackVisualization() {
+    console.log('Creating fallback visualization using DOM elements')
+
+    if (!canvas.value || !allData) {
+      console.error(
+        'Cannot create fallback visualization: missing canvas or data'
+      )
+      return false
+    }
+
+    try {
+      // Get container
+      const container = canvas.value.parentElement
+      if (!container) return false
+
+      // Clear container
+      while (container.firstChild) {
+        container.removeChild(container.firstChild)
+      }
+
+      // Create a wrapper div with the same dimensions
+      const wrapper = document.createElement('div')
+      wrapper.className = 'fallback-visualization'
+      wrapper.style.position = 'absolute'
+      wrapper.style.inset = '0'
+      wrapper.style.overflow = 'hidden'
+      wrapper.style.backgroundColor = 'rgb(26, 32, 44)'
+
+      // Filter to max 1000 points for performance
+      const maxPoints = 1000
+      const pointsToRender = allData.slice(0, maxPoints)
+
+      // Calculate date range for x-axis mapping
+      const dates = pointsToRender
+        .map((p) => getPointTimestamp(p))
+        .filter(Boolean)
+
+      if (dates.length === 0) {
+        console.error('No valid dates for fallback visualization')
+        return false
+      }
+
+      const timeExtent = [
+        Math.min(...dates.map((d) => d.getTime())),
+        Math.max(...dates.map((d) => d.getTime()))
+      ]
+
+      const timeRange = timeExtent[1] - timeExtent[0]
+      const getSender = (msg) =>
+        msg.from || msg.sender || msg.sender_name || 'unknown'
+
+      // Create points
+      pointsToRender.forEach((point, i) => {
+        try {
+          const date = getPointTimestamp(point)
+          if (!date) return
+
+          // Calculate position
+          const timestamp = date.getTime()
+          const xPercent = (timestamp - timeExtent[0]) / timeRange
+
+          // Y-position based on time of day (0-24h)
+          const hours = date.getHours() + date.getMinutes() / 60
+          const yPercent = hours / 24
+
+          // Create point element
+          const pointEl = document.createElement('div')
+          pointEl.style.position = 'absolute'
+          pointEl.style.left = `${xPercent * 100}%`
+          pointEl.style.top = `${yPercent * 100}%`
+          pointEl.style.width = '4px'
+          pointEl.style.height = '4px'
+          pointEl.style.borderRadius = '50%'
+          pointEl.style.transform = 'translate(-50%, -50%)'
+
+          // Get color from color map
+          const sender = getSender(point)
+          pointEl.style.backgroundColor = colorMap.getSenderColor(sender)
+
+          // Add click event to select point
+          pointEl.addEventListener('click', () => {
+            // Deselect previous selection
+            const selectedEls = wrapper.querySelectorAll(
+              '.fallback-point-selected'
+            )
+            selectedEls.forEach((el) => {
+              el.classList.remove('fallback-point-selected')
+              el.style.width = '4px'
+              el.style.height = '4px'
+            })
+
+            // Select this point
+            pointEl.classList.add('fallback-point-selected')
+            pointEl.style.width = '8px'
+            pointEl.style.height = '8px'
+
+            // Update selection state
+            selectedPoint.value = point
+            selectedPoints.value = [point]
+          })
+
+          wrapper.appendChild(pointEl)
+        } catch (err) {
+          // Skip points with errors
+        }
+      })
+
+      // Add message about fallback mode
+      const msgEl = document.createElement('div')
+      msgEl.style.position = 'absolute'
+      msgEl.style.bottom = '10px'
+      msgEl.style.left = '10px'
+      msgEl.style.right = '10px'
+      msgEl.style.padding = '8px'
+      msgEl.style.backgroundColor = 'rgba(0,0,0,0.7)'
+      msgEl.style.color = 'white'
+      msgEl.style.borderRadius = '4px'
+      msgEl.style.fontSize = '12px'
+      msgEl.style.textAlign = 'center'
+      msgEl.textContent = `Using simplified visualization with ${pointsToRender.length} of ${allData.length} messages`
+
+      wrapper.appendChild(msgEl)
+      container.appendChild(wrapper)
+
+      return true
+    } catch (err) {
+      console.error('Error creating fallback visualization:', err)
       return false
     }
   }
@@ -414,15 +583,18 @@ export function useVisualization() {
       return
     }
 
-    // Cancel any existing batch processing
-    if (currentBatchTimeout) {
-      clearTimeout(currentBatchTimeout)
-      currentBatchTimeout = null
-    }
-
     // Store for filtering later
     allData = rawData
     selectedPoints.value = [] // Reset selected points when data changes
+
+    // If scatterplot failed to initialize, try fallback visualization
+    if (!scatterplot) {
+      console.warn(
+        'No scatterplot instance found, trying fallback visualization'
+      )
+      createFallbackVisualization()
+      return
+    }
 
     // Set up streaming mode
     const streaming = options.streaming !== false // Default to streaming mode
@@ -915,11 +1087,28 @@ export function useVisualization() {
 
     // Get the current dimensions of the container
     const container = canvas.value.parentElement
+    if (!container) {
+      console.warn('Cannot resize visualization: no parent container found')
+      return
+    }
+
     const rect = container.getBoundingClientRect()
+
+    // Sanity check for zero dimensions (can happen during transitions)
+    if (rect.width <= 0 || rect.height <= 0) {
+      console.warn(
+        `Cannot resize to zero dimensions: ${rect.width}x${rect.height}`
+      )
+      // Retry after a short delay to allow layout to settle
+      setTimeout(() => resizeVisualization(), 50)
+      return
+    }
 
     // Set the canvas dimensions to match the container
     canvas.value.width = rect.width
     canvas.value.height = rect.height
+    canvas.value.style.width = rect.width + 'px'
+    canvas.value.style.height = rect.height + 'px'
 
     // Update the scatterplot dimensions
     scatterplot.set({

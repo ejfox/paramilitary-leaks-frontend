@@ -1,21 +1,5 @@
 <template>
   <div class="relative w-full">
-    <!-- Toggle Button -->
-    <button @click="isFilterVisible = !isFilterVisible"
-      class="absolute right-4 z-20 text-gray-400 hover:text-white transition-colors bg-gray-800 py-1.5 px-3 rounded-full"
-      :class="isFilterVisible ? 'top-2' : 'top-0'" style="min-height: 44px;">
-      <div class="flex items-center text-xs">
-        <span class="mr-1">{{ isFilterVisible ? 'Hide' : 'Show' }} Filters</span>
-        <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" viewBox="0 0 20 20" fill="currentColor">
-          <path fill-rule="evenodd"
-            :d="isFilterVisible
-              ? 'M14.707 12.707a1 1 0 01-1.414 0L10 9.414l-3.293 3.293a1 1 0 01-1.414-1.414l4-4a1 1 0 011.414 0l4 4a1 1 0 010 1.414z'
-              : 'M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z'"
-            clip-rule="evenodd" />
-        </svg>
-      </div>
-    </button>
-
     <!-- Filter Bar -->
     <transition name="slide">
       <div v-if="isFilterVisible" class="w-full bg-gray-800 border-b border-gray-700 pt-2 pb-3 px-3 overflow-hidden">
@@ -100,8 +84,9 @@
       </div>
     </transition>
 
-    <!-- Mobile Filters Toggle - fixed at the bottom of the screen -->
-    <div v-if="!isFilterVisible && isMobile" class="fixed bottom-20 left-1/2 transform -translate-x-1/2 z-40 shadow-lg">
+    <!-- Mobile Filters Toggle - fixed at the bottom of the screen (only shown if there's enough space) -->
+    <div v-if="isMobile && !isFilterVisible && bottomSpaceAvailable"
+      class="fixed bottom-20 left-1/2 transform -translate-x-1/2 z-40 shadow-lg">
       <button @click="isFilterVisible = true"
         class="bg-blue-600 text-white rounded-full px-4 py-2 shadow-lg flex items-center justify-center"
         style="min-height: 44px;">
@@ -125,8 +110,9 @@ const emit = defineEmits(['filters-changed'])
 
 const appStore = useAppStore()
 const isSearching = ref(false)
-const isFilterVisible = ref(false) // Default to hidden on mobile
+const isFilterVisible = ref(true) // Default to visible
 const isMobile = ref(false)
+const bottomSpaceAvailable = ref(true) // Indicates if there's enough space at the bottom of the screen
 
 // Create local reactive copy of filters
 const localFilters = reactive({
@@ -141,10 +127,13 @@ const searchInput = ref(appStore.filters.searchTerm)
 function checkIfMobile() {
   isMobile.value = window.innerWidth < 768 // md breakpoint
 
-  // On desktop, always show filters by default
-  if (!isMobile.value && !isFilterVisible.value) {
+  // On desktop, always show filters
+  if (!isMobile.value) {
     isFilterVisible.value = true
   }
+
+  // Check if there's enough space at the bottom (use window height to determine)
+  bottomSpaceAvailable.value = window.innerHeight > 700; // Only show on taller screens
 }
 
 // Watch for store changes and update local filters

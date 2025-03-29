@@ -1,16 +1,16 @@
 <template>
-  <section class="py-16 bg-gradient-to-b from-gray-950 to-gray-900">
-    <div class="container mx-auto px-4 max-w-4xl">
+  <section class="py-24 bg-gradient-to-b from-gray-950 to-gray-900">
+    <div class="container mx-auto px-6 max-w-4xl">
       <!-- Title slot -->
       <slot name="title">
-        <h2 class="text-3xl sm:text-4xl font-bold mb-8 text-white text-center">The Paramilitary Archive</h2>
+        <h2 class="text-3xl sm:text-4xl font-bold mb-12 text-white text-center">The Paramilitary Archive</h2>
       </slot>
 
       <!-- Introduction slot -->
       <slot name="introduction">
-        <div class="prose prose-lg prose-invert mx-auto mb-10">
-          <p>
-            Default introduction text - this will be replaced by content from the parent component.
+        <div class="prose prose-lg prose-invert mx-auto mb-16 px-4">
+          <p class="text-center text-xl">
+            The leaked database includes messages from paramilitary groups and militias spanning multiple years.
           </p>
         </div>
       </slot>

@@ -1,5 +1,25 @@
 <template>
   <div class="min-h-screen w-screen bg-gray-900 flex flex-col overflow-hidden">
+    <!-- Mobile Notification -->
+    <transition name="fade">
+      <div v-if="showMobileNotification" class="fixed top-4 left-4 right-4 z-50">
+        <div class="bg-blue-600 text-white px-4 py-3 rounded-lg shadow-lg flex items-center">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
+            <path fill-rule="evenodd"
+              d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z"
+              clip-rule="evenodd" />
+          </svg>
+          <div class="flex-1">The timeline view is optimized for desktop viewing. Showing metadata view instead.</div>
+          <button @click="showMobileNotification = false" class="ml-3 text-white hover:text-gray-200">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+              <path fill-rule="evenodd"
+                d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"
+                clip-rule="evenodd" />
+            </svg>
+          </button>
+        </div>
+      </div>
+    </transition>
     <!-- Navigation Bar -->
     <TopBar current-page="Timeline">
       <template #additional-links>
@@ -291,7 +311,7 @@
         </div>
 
         <!-- Scatterplot visualization - always present -->
-        <div class="flex-1 relative">
+        <div class="flex-1 relative" :style="isMobile ? 'min-height: 60vh;' : ''">
           <canvas ref="canvas" class="absolute inset-0 w-full h-full"></canvas>
         </div>
 
@@ -424,6 +444,7 @@ const highlightedSender = ref(null)
 const activeView = ref('time')
 const searchLoading = ref(false)
 const visualizationStreaming = ref(false)
+const showMobileNotification = ref(false)
 const streamingProgress = reactive({
   processed: 0,
   total: 0,
@@ -943,14 +964,47 @@ watch(selectedPoints, (newSelectedPoints) => {
   }
 }, { deep: true })
 
+// Add this helper function for reliable resizing with delay
+function delayedResize() {
+  nextTick(() => {
+    setTimeout(() => {
+      if (canvas.value && activeView.value === 'time') {
+        resizeVisualization();
+        console.log('Delayed visualization resize executed');
+      }
+    }, 100);
+  });
+}
+
 // Handle window resize
 function handleResize() {
   checkIfMobile()
 
-  if (activeView.value === 'time') {
+  // For mobile devices, use a more aggressive approach with multiple resize attempts
+  if (isMobile.value) {
+    // First immediate attempt
+    if (canvas.value && activeView.value === 'time') {
+      resizeVisualization()
+    }
+
+    // Multiple delayed attempts to ensure proper sizing after layout stabilizes
+    for (let delay of [100, 300, 500]) {
+      setTimeout(() => {
+        if (canvas.value && activeView.value === 'time') {
+          resizeVisualization()
+          console.log(`Mobile resize at ${delay}ms delay`)
+        }
+      }, delay)
+    }
+  } else {
+    // Desktop resize is simpler
     nextTick(() => {
-      resizeVisualization();
-    });
+      setTimeout(() => {
+        if (canvas.value && activeView.value === 'time') {
+          resizeVisualization()
+        }
+      }, 100)
+    })
   }
 
   // If we're on desktop, always show sidebar
@@ -964,6 +1018,20 @@ onMounted(async () => {
     // Check if mobile on initial load
     checkIfMobile()
 
+    // If mobile, switch to metadata view
+    if (isMobile.value) {
+      activeView.value = 'metadata'
+    }
+
+    // Also check for iOS Safari specifically
+    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream
+    const isSafari = /Safari/.test(navigator.userAgent) && !/Chrome/.test(navigator.userAgent)
+    const isIOSSafari = isIOS && isSafari
+
+    if (isIOSSafari) {
+      console.log('iOS Safari detected, using special handling')
+    }
+
     // Set up resize listener
     window.addEventListener('resize', handleResize)
 
@@ -972,6 +1040,29 @@ onMounted(async () => {
 
     // Initialize the visualization first so it's ready when data arrives
     initScatterplot()
+
+    // For iOS Safari, we need a second init after a delay
+    if (isIOSSafari) {
+      setTimeout(() => {
+        console.log('iOS Safari: Re-initializing visualization')
+        if (canvas.value) {
+          // Force canvas removal and recreation for iOS Safari
+          const container = canvas.value.parentElement
+          const oldCanvas = canvas.value
+
+          // Create a new canvas element
+          const newCanvas = document.createElement('canvas')
+          newCanvas.className = oldCanvas.className
+
+          // Replace the old canvas with the new one
+          container.removeChild(oldCanvas)
+          container.appendChild(newCanvas)
+
+          // Re-initialize with the new canvas
+          initScatterplot(newCanvas)
+        }
+      }, 100)
+    }
 
     // First try to reset DuckDB to clear any existing tables/connections
     try {
@@ -1118,8 +1209,21 @@ onMounted(async () => {
           console.log('Large dataset detected, deferring render...')
           setTimeout(() => {
             try {
-              transformData(result.data)
-              loading.value = false
+              // On mobile, we need to ensure canvas is ready before transforming data
+              if (isMobile.value) {
+                // Force a resize to ensure proper canvas dimensions first
+                resizeVisualization();
+                console.log('Mobile device: forced canvas resize before transformation');
+
+                // Then start transformation with a small delay
+                setTimeout(() => {
+                  transformData(result.data);
+                  loading.value = false;
+                }, 200);
+              } else {
+                transformData(result.data)
+                loading.value = false
+              }
             } catch (transformErr) {
               console.error('Error during deferred transform:', transformErr)
               error.value = 'Error rendering visualization: ' + transformErr.message
@@ -1137,8 +1241,21 @@ onMounted(async () => {
           }, 0)
         } else {
           try {
-            transformData(result.data)
-            loading.value = false
+            // For smaller datasets, still use a mobile-specific approach if needed
+            if (isMobile.value) {
+              // Force a resize to ensure proper canvas dimensions first
+              resizeVisualization();
+              console.log('Mobile device: forced canvas resize before transformation');
+
+              // Then start transformation with a small delay
+              setTimeout(() => {
+                transformData(result.data);
+                loading.value = false;
+              }, 200);
+            } else {
+              transformData(result.data)
+              loading.value = false
+            }
           } catch (transformErr) {
             console.error('Error during transform:', transformErr)
             error.value = 'Error rendering visualization: ' + transformErr.message
@@ -1182,13 +1299,55 @@ onUnmounted(() => {
 watch(activeView, (newView, oldView) => {
   console.log(`View changed from ${oldView} to ${newView}`);
 
-  // Just trigger a resize when switching to time view
+  // Prevent mobile users from switching to time view
+  if (newView === 'time' && isMobile.value) {
+    activeView.value = 'metadata'
+    showMobileNotification.value = true
+    // Hide notification after 5 seconds
+    setTimeout(() => {
+      showMobileNotification.value = false
+    }, 5000)
+    return
+  }
+
+  // Use a more aggressive approach for mobile devices
   if (newView === 'time') {
-    nextTick(() => {
-      if (canvas.value) {
-        resizeVisualization();
+    if (isMobile.value) {
+      // For mobile, use multiple resize attempts with increasing delays
+      for (let delay of [50, 150, 300, 500]) {
+        setTimeout(() => {
+          if (canvas.value) {
+            resizeVisualization();
+            console.log(`Mobile view change resize at ${delay}ms delay`);
+          }
+        }, delay);
       }
-    });
+    } else {
+      // For desktop, a single delayed resize is sufficient
+      nextTick(() => {
+        setTimeout(() => {
+          if (canvas.value) {
+            resizeVisualization();
+            console.log('Visualization resized after view change');
+          }
+        }, 100);
+      });
+    }
+  }
+})
+
+// Watch sidebar visibility specifically for mobile
+watch(showSidebar, (newVal) => {
+  if (isMobile.value && activeView.value === 'time') {
+    // Use multiple resize attempts with increasing delays
+    for (let delay of [50, 150, 300]) {
+      setTimeout(() => {
+        if (canvas.value) {
+          resizeVisualization();
+          console.log(`Mobile sidebar toggle resize at ${delay}ms delay`);
+        }
+      }, delay);
+    }
   }
 })
 

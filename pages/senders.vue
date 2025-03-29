@@ -66,6 +66,74 @@
           </div>
         </div>
 
+        <!-- Sender Superlatives - OSINT Insights -->
+        <div class="border-t border-gray-700 pt-4 pb-6 mb-4">
+          <div class="text-gray-400 text-xs uppercase tracking-wider mb-3">Sender Superlatives</div>
+
+          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <!-- One-and-Done Senders -->
+            <div class="bg-gray-800/40 rounded-lg p-3 border-l-2 border-orange-500/70">
+              <div class="text-orange-400 font-medium text-sm mb-1">One-and-Done Senders</div>
+              <div class="text-xl text-white font-light mb-1">{{ senderSuperlatives.oneTimeSenders.count }}</div>
+              <div class="text-gray-400 text-xs">
+                {{ senderSuperlatives.oneTimeSenders.percentage }}% of senders sent just one message
+              </div>
+            </div>
+
+            <!-- Power Users -->
+            <div class="bg-gray-800/40 rounded-lg p-3 border-l-2 border-blue-500/70">
+              <div class="text-blue-400 font-medium text-sm mb-1">Power Users</div>
+              <div class="text-xl text-white font-light mb-1">{{ senderSuperlatives.powerUsers.count }}</div>
+              <div class="text-gray-400 text-xs flex items-center">
+                <span>Top sender: </span>
+                <div class="inline-flex items-center ml-1">
+                  <div class="w-2 h-2 rounded-full mr-1"
+                    :style="{ backgroundColor: getSenderColor(senderSuperlatives.powerUsers.topSender.name) }"></div>
+                  <span class="truncate max-w-[120px] text-white">{{ senderSuperlatives.powerUsers.topSender.name
+                  }}</span>
+                </div>
+                <span class="ml-1">({{ senderSuperlatives.powerUsers.topSender.count }} msgs)</span>
+              </div>
+            </div>
+
+            <!-- Streak Maintainers -->
+            <div class="bg-gray-800/40 rounded-lg p-3 border-l-2 border-purple-500/70">
+              <div class="text-purple-400 font-medium text-sm mb-1">Streak Maintainers</div>
+              <div class="text-xl text-white font-light mb-1">{{ senderSuperlatives.streakMaintainers.count }}</div>
+              <div class="text-gray-400 text-xs">
+                Senders with 7+ day active streaks ({{ senderSuperlatives.streakMaintainers.percentage }}%)
+              </div>
+            </div>
+
+            <!-- Night Owls -->
+            <div class="bg-gray-800/40 rounded-lg p-3 border-l-2 border-indigo-500/70">
+              <div class="text-indigo-400 font-medium text-sm mb-1">Night Owls</div>
+              <div class="text-xl text-white font-light mb-1">{{ senderSuperlatives.nightOwls.count }}</div>
+              <div class="text-gray-400 text-xs">
+                Senders primarily active between 10PM-6AM ({{ senderSuperlatives.nightOwls.percentage }}%)
+              </div>
+            </div>
+
+            <!-- Weekend Warriors -->
+            <div class="bg-gray-800/40 rounded-lg p-3 border-l-2 border-emerald-500/70">
+              <div class="text-emerald-400 font-medium text-sm mb-1">Weekend Warriors</div>
+              <div class="text-xl text-white font-light mb-1">{{ senderSuperlatives.weekendWarriors.count }}</div>
+              <div class="text-gray-400 text-xs">
+                Senders with >50% weekend activity ({{ senderSuperlatives.weekendWarriors.percentage }}%)
+              </div>
+            </div>
+
+            <!-- Conversation Starters -->
+            <div class="bg-gray-800/40 rounded-lg p-3 border-l-2 border-rose-500/70">
+              <div class="text-rose-400 font-medium text-sm mb-1">Conversation Starters</div>
+              <div class="text-xl text-white font-light mb-1">{{ senderSuperlatives.conversationStarters.count }}</div>
+              <div class="text-gray-400 text-xs">
+                Senders who rarely reply but start threads ({{ senderSuperlatives.conversationStarters.percentage }}%)
+              </div>
+            </div>
+          </div>
+        </div>
+
         <!-- Simple Senders List -->
         <div class="border-t border-gray-700 pt-2">
           <div class="text-gray-400 text-xs uppercase tracking-wider mb-1">All Senders</div>
@@ -254,6 +322,258 @@ function processSenders() {
     .sort((a, b) => b.count - a.count)
 
   console.log(`Found ${senders.value.length} unique senders`)
+
+  // Calculate sender superlatives after we have the basic sender data
+  calculateSenderSuperlatives()
+}
+
+// Reactive reference for sender superlatives
+const senderSuperlatives = ref({
+  oneTimeSenders: { count: 0, percentage: 0 },
+  powerUsers: { count: 0, percentage: 0, topSender: { name: '', count: 0 } },
+  streakMaintainers: { count: 0, percentage: 0 },
+  nightOwls: { count: 0, percentage: 0 },
+  weekendWarriors: { count: 0, percentage: 0 },
+  conversationStarters: { count: 0, percentage: 0 }
+})
+
+// Helper function to get timestamp from a message - same as metadata.vue
+function getMessageTimestamp(message) {
+  const timestamp = message.date || message.timestamp;
+
+  if (!timestamp) return null;
+
+  // If it's already a Date object, return it
+  if (timestamp instanceof Date) return timestamp;
+
+  // If it's a string, handle various formats
+  if (typeof timestamp === 'string') {
+    // If it looks like an ISO date string (YYYY-MM-DD...)
+    if (timestamp.length >= 10 && timestamp.includes('-')) {
+      // Take just the date part if it has time
+      const dateStr = timestamp.substring(0, 10);
+      const date = new Date(dateStr);
+      if (!isNaN(date.getTime())) return date;
+    }
+
+    // Try parsing as regular date
+    const date = new Date(timestamp);
+    if (!isNaN(date.getTime())) return date;
+  }
+
+  // If it's a number (unix timestamp), convert to milliseconds if needed
+  if (typeof timestamp === 'number') {
+    const msTimestamp = timestamp < 10000000000 ? timestamp * 1000 : timestamp;
+    return new Date(msTimestamp);
+  }
+
+  return null;
+}
+
+// Helper function to get content from a message - same as metadata.vue
+function getMessageContent(message) {
+  return message.message || message.text || message.content || null;
+}
+
+// Calculate all sender superlatives
+function calculateSenderSuperlatives() {
+  console.log('Calculating sender superlatives...')
+
+  // -------- One-time senders --------
+  const oneTimeSenders = senders.value.filter(sender => sender.count === 1);
+  const oneTimeCount = oneTimeSenders.length;
+  const oneTimePercentage = Math.round((oneTimeCount / senders.value.length) * 100);
+
+  // -------- Power users (top 5% of senders) --------
+  const powerUserThreshold = Math.max(100, Math.ceil(senders.value.length * 0.05));
+  const powerUsers = senders.value.slice(0, powerUserThreshold);
+  const topSender = senders.value[0] || { name: 'Unknown', count: 0 };
+
+  // -------- Streak maintainers --------
+  // Group messages by sender and by day
+  const senderMessagesByDay = new Map();
+
+  rawData.value.forEach(msg => {
+    const sender = getMessageSender(msg);
+    const timestamp = getMessageTimestamp(msg);
+    if (!timestamp) return;
+
+    const dateKey = timestamp.toISOString().slice(0, 10);
+
+    if (!senderMessagesByDay.has(sender)) {
+      senderMessagesByDay.set(sender, new Set());
+    }
+
+    senderMessagesByDay.get(sender).add(dateKey);
+  });
+
+  // Find senders with 7+ day streaks
+  const streakMaintainers = [];
+
+  senderMessagesByDay.forEach((days, sender) => {
+    if (days.size < 7) return; // Skip senders with fewer than 7 days of activity
+
+    // Sort days chronologically
+    const sortedDays = Array.from(days).sort();
+
+    // Find longest streak
+    let currentStreak = 1;
+    let maxStreak = 1;
+
+    for (let i = 1; i < sortedDays.length; i++) {
+      const prevDate = new Date(sortedDays[i - 1]);
+      const currDate = new Date(sortedDays[i]);
+
+      prevDate.setDate(prevDate.getDate() + 1);
+
+      if (prevDate.toISOString().slice(0, 10) === currDate.toISOString().slice(0, 10)) {
+        currentStreak++;
+      } else {
+        currentStreak = 1;
+      }
+
+      maxStreak = Math.max(maxStreak, currentStreak);
+    }
+
+    if (maxStreak >= 7) {
+      streakMaintainers.push(sender);
+    }
+  });
+
+  // -------- Night owls --------
+  // Count messages by hour for each sender
+  const senderHourCounts = new Map();
+
+  rawData.value.forEach(msg => {
+    const sender = getMessageSender(msg);
+    const timestamp = getMessageTimestamp(msg);
+    if (!timestamp) return;
+
+    const hour = timestamp.getHours();
+
+    if (!senderHourCounts.has(sender)) {
+      senderHourCounts.set(sender, {
+        total: 0,
+        night: 0 // 10PM-6AM
+      });
+    }
+
+    const counts = senderHourCounts.get(sender);
+    counts.total++;
+
+    // Check if message was sent during night hours (10PM-6AM)
+    if (hour >= 22 || hour < 6) {
+      counts.night++;
+    }
+  });
+
+  // Find senders who are primarily active at night (>50% of messages)
+  const nightOwls = [];
+  senderHourCounts.forEach((counts, sender) => {
+    if (counts.total >= 5 && (counts.night / counts.total) > 0.5) {
+      nightOwls.push(sender);
+    }
+  });
+
+  // -------- Weekend warriors --------
+  // Count messages by day of week for each sender
+  const senderDayOfWeekCounts = new Map();
+
+  rawData.value.forEach(msg => {
+    const sender = getMessageSender(msg);
+    const timestamp = getMessageTimestamp(msg);
+    if (!timestamp) return;
+
+    const dayOfWeek = timestamp.getDay(); // 0 = Sunday, 6 = Saturday
+
+    if (!senderDayOfWeekCounts.has(sender)) {
+      senderDayOfWeekCounts.set(sender, {
+        total: 0,
+        weekend: 0 // Saturday and Sunday
+      });
+    }
+
+    const counts = senderDayOfWeekCounts.get(sender);
+    counts.total++;
+
+    // Check if message was sent on weekend (Saturday or Sunday)
+    if (dayOfWeek === 0 || dayOfWeek === 6) {
+      counts.weekend++;
+    }
+  });
+
+  // Find senders who are primarily active on weekends (>50% of messages)
+  const weekendWarriors = [];
+  senderDayOfWeekCounts.forEach((counts, sender) => {
+    if (counts.total >= 5 && (counts.weekend / counts.total) > 0.5) {
+      weekendWarriors.push(sender);
+    }
+  });
+
+  // -------- Conversation starters --------
+  // Analyze reply patterns for each sender
+  const senderReplyPatterns = new Map();
+  const replyRegex = /in reply to message\d+:/i;
+
+  rawData.value.forEach(msg => {
+    const sender = getMessageSender(msg);
+    const content = getMessageContent(msg);
+    if (!content) return;
+
+    if (!senderReplyPatterns.has(sender)) {
+      senderReplyPatterns.set(sender, {
+        total: 0,
+        replies: 0
+      });
+    }
+
+    const patterns = senderReplyPatterns.get(sender);
+    patterns.total++;
+
+    // Check if message is a reply
+    if (replyRegex.test(content)) {
+      patterns.replies++;
+    }
+  });
+
+  // Find senders who rarely reply but have many messages (conversation starters)
+  const conversationStarters = [];
+  senderReplyPatterns.forEach((patterns, sender) => {
+    if (patterns.total >= 10 && (patterns.replies / patterns.total) < 0.2) {
+      conversationStarters.push(sender);
+    }
+  });
+
+  // Update the superlatives reactive reference
+  senderSuperlatives.value = {
+    oneTimeSenders: {
+      count: oneTimeCount,
+      percentage: oneTimePercentage
+    },
+    powerUsers: {
+      count: powerUsers.length,
+      percentage: Math.round((powerUsers.length / senders.value.length) * 100),
+      topSender
+    },
+    streakMaintainers: {
+      count: streakMaintainers.length,
+      percentage: Math.round((streakMaintainers.length / senders.value.length) * 100)
+    },
+    nightOwls: {
+      count: nightOwls.length,
+      percentage: Math.round((nightOwls.length / senders.value.length) * 100)
+    },
+    weekendWarriors: {
+      count: weekendWarriors.length,
+      percentage: Math.round((weekendWarriors.length / senders.value.length) * 100)
+    },
+    conversationStarters: {
+      count: conversationStarters.length,
+      percentage: Math.round((conversationStarters.length / senders.value.length) * 100)
+    }
+  };
+
+  console.log('Sender superlatives calculated:', senderSuperlatives.value);
 }
 
 // Load data on component mount - using the same approach as metadata.vue
