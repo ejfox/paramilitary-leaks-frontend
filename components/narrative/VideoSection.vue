@@ -86,17 +86,24 @@
 
       <!-- Transition overlay that appears as you scroll through the video section -->
       <div
-        class="absolute bottom-0 left-0 right-0 h-screen pointer-events-none bg-gradient-to-b from-transparent to-gray-950 transition-opacity duration-1000"
-        :style="{ opacity: Math.max(0, (videoProgress - 0.6) * 2.5) }">
+        class="absolute bottom-0 left-0 right-0 h-screen pointer-events-none bg-gradient-to-b from-transparent to-gray-950 transition-opacity duration-1500"
+        :style="{
+          opacity: Math.max(0, (videoProgress - 0.4) * 1.5),
+          transition: 'opacity 800ms ease-in-out'
+        }">
         <!-- Preview of what's coming next to provide visual content during transition -->
-        <div class="container mx-auto px-6 h-full flex flex-col justify-end pb-24 transition-opacity duration-1000"
-          :style="{ opacity: Math.max(0, (videoProgress - 0.7) * 3.33) }">
+        <div class="container mx-auto px-6 h-full flex flex-col justify-end pb-40 transition-opacity duration-1200"
+          :style="{
+            opacity: Math.max(0, (videoProgress - 0.5) * 2),
+            transition: 'opacity 800ms ease-in-out, transform 800ms ease-in-out',
+            transform: videoProgress > 0.5 ? 'translateY(0)' : 'translateY(20px)'
+          }">
           <h2 class="text-3xl md:text-4xl font-bold text-white mb-8 text-shadow-lg">The Archive: John Williams' American
             Paramilitary Leaks
           </h2>
-          <div class="text-center mt-4 text-gray-300 animate-pulse">
+          <div class="text-center mt-12 text-gray-300 animate-pulse">
             <span>Continue Scrolling</span>
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mx-auto mt-2" fill="none" stroke-linecap="round"
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 mx-auto mt-3" fill="none" stroke-linecap="round"
               stroke-linejoin="round" stroke-width="2" viewBox="0 0 24 24" stroke="currentColor">
               <path d="M19 14l-7 7m0 0l-7-7m7 7V3"></path>
             </svg>
@@ -181,9 +188,10 @@ const handleScroll = () => {
     const scrolledAmount = Math.max(0, scrollPosition - sectionTop)
     const scrollPercentage = scrolledAmount / totalScrollableAmount
 
-    // Adjust the release point to be near the end of the scroll to keep video visible longer
-    const releasePoint = sectionTop + sectionHeight * 0.97 - viewportHeight
-    const transitionZone = viewportHeight * 1.5
+    // Adjust the release point to allow more natural scrolling at the end
+    // Use a lower percentage to allow for natural scroll transition
+    const releasePoint = sectionTop + sectionHeight * 0.82 - viewportHeight
+    const transitionZone = viewportHeight * 2.5 // Extended transition zone for smoother fade
 
     if (scrollPosition >= sectionTop && scrollPosition < releasePoint) {
       // Fully fixed mode
@@ -193,8 +201,11 @@ const handleScroll = () => {
       const scrollableDistance = releasePoint - sectionTop
       const scrolled = scrollPosition - sectionTop
 
-      // OPTIMIZED PLAYBACK: Use 70% of the section height for video playback
-      let progress = Math.min(Math.max(scrolled / (scrollableDistance * 0.7), 0), 0.99)
+      // Use a more gradual progression curve
+      let progress = Math.min(Math.max(scrolled / scrollableDistance, 0), 0.99)
+
+      // Apply slight easing to make the progress feel more natural
+      progress = Math.pow(progress, 0.9)
 
       // Only hold on last frame for final 5% of the scroll
       const progressPercentage = scrolled / scrollableDistance
@@ -213,23 +224,26 @@ const handleScroll = () => {
       // Reset any transform we may have applied during transition
       if (videoContainer.value) {
         videoContainer.value.style.transform = ''
+        videoContainer.value.style.opacity = '1'
       }
     }
     else if (scrollPosition >= releasePoint && scrollPosition < (releasePoint + transitionZone)) {
-      // Transition zone - fade out smoothly without moving up
+      // Transition zone - VERY gradual fade out to allow natural scrolling
+      // Keep fixed until nearly completely faded
       shouldBeFixed.value = true
 
       // Calculate how far into transition zone we are (0 to 1)
       const transitionProgress = (scrollPosition - releasePoint) / transitionZone
 
-      // Apply fade out effect
+      // Apply fade out effect with an even more gradual curve
       if (videoContainer.value) {
-        // Start fading out after 20% into the transition zone
-        if (transitionProgress > 0.2) {
-          const adjustedProgress = (transitionProgress - 0.2) / 0.8 // Rescale 0.2-1.0 to 0-1.0
-          videoContainer.value.style.opacity = (1 - adjustedProgress).toString()
-        } else {
-          videoContainer.value.style.opacity = '1' // Fully visible for first 20%
+        // Use a slow fade throughout the entire transition
+        const opacity = 1 - Math.pow(transitionProgress, 0.4); // Much slower fade
+        videoContainer.value.style.opacity = opacity.toString()
+
+        // Only unfix position when almost invisible (more natural scroll)
+        if (opacity < 0.05) {
+          shouldBeFixed.value = false
         }
       }
 
@@ -245,6 +259,11 @@ const handleScroll = () => {
     else {
       // Outside fixed zones
       shouldBeFixed.value = false
+
+      // Make sure opacity is reset if we're early in the section
+      if (videoContainer.value && scrollPosition < sectionTop) {
+        videoContainer.value.style.opacity = '1'
+      }
     }
   } catch (error) {
     console.error('Error in scroll handler:', error)
@@ -297,7 +316,7 @@ const updateVideoProgress = () => {
     // Calculate progress percentage (0 to 1)
     const scrollableDistance = sectionHeight - viewportHeight
     const scrolled = Math.max(0, scrollPosition - sectionTop)
-    const progress = Math.min(Math.max(scrolled / (scrollableDistance * 0.7), 0), 1)
+    const progress = Math.min(Math.max(scrolled / scrollableDistance, 0), 1)
 
     // Update our progress ref
     videoProgress.value = progress
@@ -418,7 +437,8 @@ defineExpose({
 /* Video section styles */
 .narrative-video-section {
   position: relative;
-  height: 800vh;
+  height: 650vh;
+  /* Further reduced from 700vh for more natural pacing */
   background: black;
   z-index: 10;
 }
@@ -429,7 +449,8 @@ defineExpose({
   width: 100%;
   overflow: hidden;
   perspective: 1000px;
-  transition: opacity 0.5s ease-out;
+  transition: opacity 1s ease-out;
+  /* Even longer duration for smoother fade */
 }
 
 .video-fixed {

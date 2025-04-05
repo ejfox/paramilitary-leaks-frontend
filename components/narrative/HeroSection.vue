@@ -1,25 +1,48 @@
 <template>
   <section ref="heroSection" class="relative h-screen flex items-center justify-center overflow-hidden z-20">
-    <!-- Hero image with fade-in effect -->
+    <!-- Parallax background layers -->
     <div class="absolute inset-0 w-full h-full overflow-hidden">
+      <!-- Background image layer - moves slowest -->
       <div class="hero-image-container w-full h-full" :class="{ 'visible': imageLoaded }">
         <img ref="heroImage"
           src="https://res.cloudinary.com/ejf/image/upload/v1742874494/Screenshot_2025-03-24_at_11.47.57_PM.png"
           alt="Paramilitary Leaks" class="w-full h-full object-cover object-center" style="object-position: 50% 30%;"
-          @load="onImageLoaded" />
-        <div class="absolute inset-0 bg-gradient-to-b from-black/70 via-black/50 to-gray-900/90"></div>
+          :style="{ transform: `scale(1.1) translateY(${scrollY * 0.05}px)` }" @load="onImageLoaded" />
+
+        <!-- Gradient overlay layer - moves slightly faster -->
+        <div class="absolute inset-0 bg-gradient-to-b from-black/70 via-black/50 to-gray-900/90"
+          :style="{ transform: `translateY(${scrollY * 0.1}px)` }"></div>
+
+        <!-- Floating particles layer - for subtle depth -->
+        <div class="absolute inset-0 opacity-40" :style="{ transform: `translateY(${scrollY * -0.15}px)` }">
+          <div v-for="i in 10" :key="i" class="absolute w-1 h-1 rounded-full bg-blue-400/20" :style="{
+            left: `${Math.random() * 100}%`,
+            top: `${Math.random() * 100}%`,
+            animation: `float ${3 + Math.random() * 5}s infinite ease-in-out`
+          }"></div>
+          <div v-for="i in 8" :key="`dot-${i}`" class="absolute w-2 h-2 rounded-full bg-white/10" :style="{
+            left: `${Math.random() * 100}%`,
+            top: `${Math.random() * 100}%`,
+            animation: `pulse ${2 + Math.random() * 4}s infinite ease-in-out ${Math.random() * 2}s`
+          }"></div>
+        </div>
+
+        <!-- Subtle vignette effect - static -->
+        <div class="absolute inset-0 bg-radial-vignette"></div>
       </div>
     </div>
 
+    <!-- Content layer - moves faster than background for parallax effect -->
     <div class="absolute inset-0 flex items-center justify-center">
       <div ref="heroContent" class="text-center z-30 px-6 transform fade-up" :class="{ 'visible': contentVisible }"
         :style="{ transform: `translateY(${scrollY * 0.4}px)` }">
-        <h1 class="text-5xl sm:text-7xl font-bold mb-6 text-white">Looking Inside An American Militia</h1>
-        <p class="text-xl sm:text-2xl text-gray-300 mx-auto mb-8 max-w-lg">
+        <h1 class="text-5xl sm:text-7xl font-bold mb-6 text-white text-shadow-lg">Looking Inside An American Militia
+        </h1>
+        <p class="text-xl sm:text-2xl text-gray-300 mx-auto mb-8 max-w-lg text-shadow-md">
           Paramilitary groups around the United States gather and train, often in secret, using encrypted chats hidden
           from public view.
         </p>
-        <p class="text-lg text-gray-400 mx-auto mb-8 max-w-prose">
+        <p class="text-lg text-gray-400 mx-auto mb-8 max-w-prose text-shadow-sm">
           These leaked telegram chats and videos offer a
           rare chance for the public to see into the inner workings and mindset of these groups and try to answer the
           question; <br />what are they preparing for?
@@ -85,9 +108,58 @@ defineExpose({
 }
 
 .hero-image-container img {
-  /* Remove zoom animation */
+  /* Scale up slightly to prevent gaps during parallax */
+  transform: scale(1.1);
+  transition: transform 0.2s ease-out;
   z-index: 25;
-  /* Extra insurance the image is above everything */
+  will-change: transform;
+}
+
+/* Radial vignette effect */
+.bg-radial-vignette {
+  background: radial-gradient(circle, transparent 40%, rgba(0, 0, 0, 0.4) 100%);
+}
+
+/* Particle animations */
+@keyframes float {
+
+  0%,
+  100% {
+    transform: translateY(0) translateX(0);
+    opacity: 0.2;
+  }
+
+  50% {
+    transform: translateY(-15px) translateX(5px);
+    opacity: 0.5;
+  }
+}
+
+@keyframes pulse {
+
+  0%,
+  100% {
+    transform: scale(1);
+    opacity: 0.2;
+  }
+
+  50% {
+    transform: scale(1.5);
+    opacity: 0.5;
+  }
+}
+
+/* Text shadow for better readability */
+.text-shadow-lg {
+  text-shadow: 0 0 15px rgba(0, 0, 0, 0.8), 0 0 30px rgba(0, 0, 0, 0.6);
+}
+
+.text-shadow-md {
+  text-shadow: 0 0 8px rgba(0, 0, 0, 0.8);
+}
+
+.text-shadow-sm {
+  text-shadow: 0 0 4px rgba(0, 0, 0, 0.8);
 }
 
 /* Magazine-style adjustments */

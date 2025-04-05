@@ -1,5 +1,10 @@
 <template>
   <div class="min-h-screen bg-gray-950 text-white overflow-hidden">
+    <!-- Scroll progress indicator -->
+    <div class="fixed top-0 left-0 w-full h-1.5 z-50">
+      <div class="bg-blue-500 h-full transition-all duration-150 ease-out" :style="`width: ${scrollProgress}%`"></div>
+    </div>
+
     <!-- Fixed navigation -->
     <div class="fixed top-0 left-0 right-0 z-50 bg-gray-950/80 backdrop-blur-lg">
       <div class="container mx-auto px-4 py-3 flex justify-between items-center">
@@ -32,19 +37,31 @@
     <StatsSection ref="statsSection" :rawData="rawData" :messagesBySender="messagesBySender" :allSenders="allSenders"
       :totalFileSize="totalFileSize" @update:top-days="handleTopDaysUpdate" />
 
-    <!-- Source information section -->
-    <section class="bg-black py-20 relative z-10">
-      <div class="container mx-auto px-4">
-        <h2 class="text-4xl font-bold mb-8 text-white">Exploring the Paramilitary Leaks</h2>
-        <div class="text-xl text-gray-300 max-w-3xl mx-auto mb-10 space-y-6">
-          <p>
-            Released by <a href="https://ddosecrets.com/article/paramilitary-leaks"
-              class="text-blue-400 hover:underline" target="_blank" rel="noopener">Distributed Denial of Secrets</a>:
-            "200 gigabytes of chat logs and recordings from paramilitary groups and militias including American
-            Patriots Three Percent (APIII) and the Oath Keepers, collected by wilderness survival guide John Williams."
-          </p>
+    <!-- Transitional buffer section to improve scrolling timing after video ends -->
+    <section class="min-h-[50vh] bg-gradient-to-b from-black/90 to-black relative z-10">
+      <div class="container mx-auto px-4 py-16">
+        <div class="opacity-0 h-5 w-5"><!-- Spacer --></div>
+      </div>
+    </section>
+
+    <!-- Source information section with fade-in effect -->
+    <section class="bg-black py-40 relative z-10" ref="sourceInfoSection">
+      <div class="container mx-auto px-4 opacity-0 transform translate-y-10"
+        :class="{ 'opacity-100 translate-y-0 transition-all duration-1000 ease-out': sourceInfoVisible }">
+        <div class="max-w-prose mx-auto">
+          <h2 class="text-5xl font-bold mb-16 text-white tracking-tight">Exploring the Paramilitary Leaks</h2>
+          <div class="text-xl leading-relaxed text-gray-300 space-y-12">
+            <p class="text-2xl">
+              Released by <a href="https://ddosecrets.com/article/paramilitary-leaks"
+                class="text-blue-400 hover:underline" target="_blank" rel="noopener">Distributed Denial of
+                Secrets</a>:
+              "200 gigabytes of chat logs and recordings from paramilitary groups and militias including American
+              Patriots Three Percent (APIII) and the Oath Keepers, collected by wilderness survival guide John
+              Williams."
+            </p>
+          </div>
         </div>
-        <div class="flex flex-col md:flex-row justify-center gap-4">
+        <div class="flex flex-col md:flex-row justify-center gap-6 mt-24">
           <NuxtLink to="/feed"
             class="inline-block px-8 py-4 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors text-lg font-medium shadow-lg hover:shadow-xl">
             Explore The Messages
@@ -61,6 +78,76 @@
       </div>
     </section>
 
+    <!-- Additional spacer section to create better pacing - increased height and padding -->
+    <section class="bg-gradient-to-b from-black to-gray-950 py-40 relative z-10">
+      <div class="container mx-auto px-4">
+        <div class="max-w-3xl mx-auto text-center min-h-[50vh]">
+          <div class="border-t border-gray-800 pt-16 mt-8"></div>
+          <div class="py-8">
+            <p class="text-xl text-gray-400 italic leading-relaxed mb-8">
+              "The militias' private communications reveal how these groups operate
+              and coordinate behind closed doors."
+            </p>
+            <p class="text-lg text-gray-500 italic mt-16">
+              Scroll down to explore the timeline of events
+            </p>
+          </div>
+          <div class="border-b border-gray-800 pb-16 mb-16"></div>
+          <!-- Added extra space to ensure smooth transition -->
+          <div class="h-[20vh]"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Scroll-Driven StreamGraph section - Updated min-height for better scrolling time -->
+    <section ref="scrollGraphSection" class="bg-gray-950 relative z-10" style="min-height: 800vh;">
+      <!-- Fixed top margin to prevent abrupt appearance - more subtle gradient -->
+      <div class="h-40 bg-gradient-to-b from-gray-950/10 via-gray-950/80 to-gray-950"></div>
+
+      <div class="container mx-auto px-4 pt-32 pb-28 text-center">
+        <div id="streamGraphIntro"
+          class="max-w-3xl mx-auto opacity-0 transform translate-y-10 transition-all duration-1000 ease-out">
+          <h2 class="text-5xl font-bold mb-12 text-white tracking-tight leading-tight">Key Events Timeline</h2>
+          <p class="text-2xl text-gray-300 mx-auto mb-20 leading-relaxed">
+            Scroll to explore how communication patterns shifted around critical events
+          </p>
+          <div class="flex justify-center mb-8">
+            <svg class="w-10 h-10 text-blue-500 animate-bounce" fill="none" stroke-linecap="round"
+              stroke-linejoin="round" stroke-width="2" viewBox="0 0 24 24" stroke="currentColor">
+              <path d="M19 14l-7 7m0 0l-7-7m7 7V3"></path>
+            </svg>
+          </div>
+        </div>
+      </div>
+
+      <!-- The scroll-driven stream graph component -->
+      <ScrollStreamGraph :messagesBySender="messagesBySender" :topSenders="allSendersExtended"
+        :scrollProgress="scrollGraphProgress" v-if="messagesBySender.length > 0" />
+
+      <!-- Loading indicator -->
+      <div v-else class="h-screen flex items-center justify-center">
+        <div class="flex flex-col items-center space-y-4 text-gray-400">
+          <svg class="animate-spin h-10 w-10 text-blue-500" xmlns="http://www.w3.org/2000/svg" fill="none"
+            viewBox="0 0 24 24">
+            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+            <path class="opacity-75" fill="currentColor"
+              d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z">
+            </path>
+          </svg>
+          <div class="text-lg">Loading timeline visualization...</div>
+          <div class="text-sm max-w-md text-center">Preparing data to visualize communication patterns across
+            paramilitary groups</div>
+        </div>
+      </div>
+
+      <div class="container mx-auto px-4 py-16">
+        <div class="text-center text-gray-400 text-base max-w-2xl mx-auto italic">
+          Notice how communication intensifies around events of national significance,
+          revealing coordination patterns within these organizations.
+        </div>
+      </div>
+    </section>
+
     <!-- Story section -->
     <section ref="storyContainer" class="relative w-full bg-gray-950">
       <!-- Story content -->
@@ -69,16 +156,19 @@
       </div>
 
       <!-- Visualization integrated directly in the narrative flow -->
-      <div class="container mx-auto py-20">
-        <h2 class="text-4xl font-bold mb-8 text-white text-center">Communication Patterns Over Time</h2>
-        <p class="text-xl text-gray-300 max-w-3xl mx-auto mb-10 text-center">
-          The ebb and flow of messages within paramilitary groups reveals coordination patterns and key moments of
-          heightened activity
-        </p>
+      <div class="container mx-auto py-28">
+        <div class="max-w-4xl mx-auto">
+          <h2 class="text-5xl font-bold mb-10 text-white text-center tracking-tight leading-tight">Communication
+            Patterns Over Time</h2>
+          <p class="text-2xl text-gray-300 max-w-2xl mx-auto mb-16 text-center leading-relaxed">
+            The ebb and flow of messages within paramilitary groups reveals coordination patterns and key moments of
+            heightened activity
+          </p>
+        </div>
 
         <!-- Main StreamGraph -->
-        <div class="bg-gray-900 p-6 rounded-lg shadow-lg mx-auto mb-12">
-          <h3 class="text-2xl font-bold mb-4 text-white">Overall Communication Activity</h3>
+        <div class="bg-gray-900 p-8 rounded-lg shadow-lg mx-auto mb-16">
+          <h3 class="text-2xl font-bold mb-6 text-white tracking-tight">Overall Communication Activity</h3>
           <StreamGraph v-if="messagesBySender.length > 0" :messagesBySender="messagesBySender"
             :topSenders="allSendersExtended" class="w-full" style="min-height: 60vh" />
           <div v-else class="h-96 flex items-center justify-center">
@@ -93,23 +183,25 @@
               <span>Loading data visualization...</span>
             </div>
           </div>
-          <div class="mt-6 text-sm text-gray-400 text-center">
+          <div class="mt-8 text-sm text-gray-400 text-center max-w-3xl mx-auto">
             This visualization shows communication patterns for the top 100 most active members of the paramilitary
             groups from May 2021 to May 2023, covering the period of highest activity.
           </div>
         </div>
 
         <!-- Explanation and Context -->
-        <div class="bg-gray-900/50 p-6 rounded-lg shadow-lg max-w-4xl mx-auto">
-          <h3 class="text-xl font-semibold mb-4 text-white">Understanding the Visualizations</h3>
-          <div class="text-gray-300 space-y-4 text-sm">
+        <div class="bg-gray-900/50 p-8 rounded-lg shadow-lg max-w-2xl mx-auto">
+          <h3 class="text-xl font-semibold mb-6 text-white tracking-tight">Understanding the Visualizations</h3>
+          <div class="text-gray-300 space-y-6 text-base leading-relaxed">
             <p>
-              These streamgraphs reveal communication patterns over time, with the thickness indicating message volume.
+              These streamgraphs reveal communication patterns over time, with the thickness indicating message
+              volume.
               Visible spikes often indicate planning coordination, events, or responses to external triggers.
             </p>
             <p>
               The most active communicators often coordinated militia activities, recruitment, and training.
-              Notice how communication ebbs and flows, with periods of heightened activity around significant political
+              Notice how communication ebbs and flows, with periods of heightened activity around significant
+              political
               events.
             </p>
           </div>
@@ -118,19 +210,23 @@
     </section>
 
     <!-- Articles section -->
-    <section class="bg-gray-950 py-20 relative z-10">
+    <section class="bg-gray-950 py-28 relative z-10">
       <div class="container mx-auto px-4">
-        <h2 class="text-4xl font-bold mb-12 text-white text-center">Further Reading</h2>
+        <div class="max-w-3xl mx-auto mb-20">
+          <h2 class="text-5xl font-bold mb-16 text-white text-center tracking-tight leading-tight">Further Reading
+          </h2>
+        </div>
 
         <!-- Micah Lee's Series -->
-        <div class="mb-16">
-          <h3 class="text-2xl font-bold mb-6 text-blue-400">Micah Lee's Investigation Series</h3>
-          <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div class="mb-24 max-w-7xl mx-auto">
+          <h3 class="text-3xl font-bold mb-12 text-blue-400 tracking-tight">Micah Lee's Investigation Series</h3>
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-10">
             <a href="https://micahflee.com/exploring-the-paramilitary-leaks/" target="_blank" rel="noopener"
               class="bg-gray-900 rounded-lg overflow-hidden shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-1">
-              <div class="p-6">
-                <h4 class="text-xl font-bold text-white mb-3">Exploring the Paramilitary Leaks</h4>
-                <p class="text-gray-300 mb-4">An introduction to the massive dataset and how to get started with
+              <div class="p-8">
+                <h4 class="text-2xl font-bold text-white mb-4 tracking-tight">Exploring the Paramilitary Leaks</h4>
+                <p class="text-gray-300 mb-6 leading-relaxed">An introduction to the massive dataset and how to get
+                  started with
                   exploring it.</p>
                 <div class="text-blue-400 text-sm font-medium">March 5, 2025</div>
               </div>
@@ -138,10 +234,12 @@
             <a href="https://micahflee.com/step-by-step-guide-to-reading-the-leaked-militia-chats-yourself/"
               target="_blank" rel="noopener"
               class="bg-gray-900 rounded-lg overflow-hidden shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-1">
-              <div class="p-6">
-                <h4 class="text-xl font-bold text-white mb-3">Step-by-step Guide to Reading the Leaked Militia Chats
+              <div class="p-8">
+                <h4 class="text-2xl font-bold text-white mb-4 tracking-tight">Step-by-step Guide to Reading the Leaked
+                  Militia Chats
                 </h4>
-                <p class="text-gray-300 mb-4">Technical guide showing how to parse and analyze the Telegram chats in the
+                <p class="text-gray-300 mb-6 leading-relaxed">Technical guide showing how to parse and analyze the
+                  Telegram chats in the
                   dataset.</p>
                 <div class="text-blue-400 text-sm font-medium">March 12, 2025</div>
               </div>
@@ -149,9 +247,12 @@
             <a href="https://micahflee.com/the-ap-iii-militias-fraudulent-charity-front-group/" target="_blank"
               rel="noopener"
               class="bg-gray-900 rounded-lg overflow-hidden shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-1">
-              <div class="p-6">
-                <h4 class="text-xl font-bold text-white mb-3">The AP III Militia's Fraudulent Charity Front Group</h4>
-                <p class="text-gray-300 mb-4">Investigation into ACON, a fake 501c3 charity used by the militia to
+              <div class="p-8">
+                <h4 class="text-2xl font-bold text-white mb-4 tracking-tight">The AP III Militia's Fraudulent Charity
+                  Front Group</h4>
+                <p class="text-gray-300 mb-6 leading-relaxed">Investigation into ACON, a fake 501c3 charity used by
+                  the
+                  militia to
                   solicit donations.</p>
                 <div class="text-blue-400 text-sm font-medium">March 21, 2025</div>
               </div>
@@ -160,15 +261,16 @@
         </div>
 
         <!-- ProPublica Investigations -->
-        <div class="mb-16">
-          <h3 class="text-2xl font-bold mb-6 text-blue-400">ProPublica Investigations</h3>
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div class="mb-24 max-w-7xl mx-auto">
+          <h3 class="text-3xl font-bold mb-12 text-blue-400 tracking-tight">ProPublica Investigations</h3>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-10">
             <a href="https://www.propublica.org/article/john-williams-infiltrated-militia-movement-american-patriots-three-percent"
               target="_blank" rel="noopener"
               class="bg-gray-900 rounded-lg overflow-hidden shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-1">
-              <div class="p-6">
-                <h4 class="text-xl font-bold text-white mb-3">The Militia and the Mole</h4>
-                <p class="text-gray-300 mb-4">The story of John Williams, who spent years infiltrating the American
+              <div class="p-8">
+                <h4 class="text-2xl font-bold text-white mb-4 tracking-tight">The Militia and the Mole</h4>
+                <p class="text-gray-300 mb-6 leading-relaxed">The story of John Williams, who spent years infiltrating
+                  the American
                   militia movement.</p>
                 <div class="text-blue-400 text-sm font-medium">ProPublica</div>
               </div>
@@ -176,9 +278,11 @@
             <a href="https://www.propublica.org/article/inside-secret-ap3-militia-american-patriots-three-percent"
               target="_blank" rel="noopener"
               class="bg-gray-900 rounded-lg overflow-hidden shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-1">
-              <div class="p-6">
-                <h4 class="text-xl font-bold text-white mb-3">Armed and Underground</h4>
-                <p class="text-gray-300 mb-4">Inside the turbulent, secret world of an American militia.</p>
+              <div class="p-8">
+                <h4 class="text-2xl font-bold text-white mb-4 tracking-tight">Armed and Underground</h4>
+                <p class="text-gray-300 mb-6 leading-relaxed">Inside the turbulent, secret world of an American
+                  militia.
+                </p>
                 <div class="text-blue-400 text-sm font-medium">ProPublica</div>
               </div>
             </a>
@@ -186,29 +290,241 @@
         </div>
 
         <!-- Additional Coverage -->
-        <div>
-          <h3 class="text-2xl font-bold mb-6 text-blue-400">Additional Coverage</h3>
-          <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div class="max-w-7xl mx-auto">
+          <h3 class="text-3xl font-bold mb-12 text-blue-400 tracking-tight">Additional Coverage</h3>
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-10">
             <a href="https://www.theguardian.com/us-news/2022/oct/07/key-oath-keepers-leader-revealed-as-former-las-vegas-police-detective"
               target="_blank" rel="noopener"
               class="bg-gray-900 rounded-lg overflow-hidden shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-1">
-              <div class="p-6">
-                <h4 class="text-xl font-bold text-white mb-3">Key Oath Keepers Leader Revealed</h4>
-                <p class="text-gray-300 mb-4">Former Las Vegas police detective identified as Oath Keepers leader.</p>
+              <div class="p-8">
+                <h4 class="text-2xl font-bold text-white mb-4 tracking-tight">Key Oath Keepers Leader Revealed</h4>
+                <p class="text-gray-300 mb-6 leading-relaxed">Former Las Vegas police detective identified as Oath
+                  Keepers leader.</p>
                 <div class="text-blue-400 text-sm font-medium">The Guardian</div>
               </div>
             </a>
             <a href="https://augustafreepress.com/news/i-played-an-unwitting-important-role-in-propublicas-the-militia-and-the-mole/"
               target="_blank" rel="noopener"
               class="bg-gray-900 rounded-lg overflow-hidden shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-1">
-              <div class="p-6">
-                <h4 class="text-xl font-bold text-white mb-3">Unwitting Role in 'The Militia and the Mole'</h4>
-                <p class="text-gray-300 mb-4">A journalist's account of their unexpected connection to the
+              <div class="p-8">
+                <h4 class="text-2xl font-bold text-white mb-4 tracking-tight">Unwitting Role in 'The Militia and the
+                  Mole'</h4>
+                <p class="text-gray-300 mb-6 leading-relaxed">A journalist's account of their unexpected connection to
+                  the
                   investigation.</p>
                 <div class="text-blue-400 text-sm font-medium">Augusta Free Press</div>
               </div>
             </a>
 
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Demo Videos section -->
+    <section ref="demoSectionRef" class="bg-gray-900 py-28 relative z-10">
+      <div class="container mx-auto px-4">
+        <div class="max-w-3xl mx-auto mb-16">
+          <h2 class="text-5xl font-bold mb-8 text-white text-center tracking-tight leading-tight">How To Use</h2>
+          <p class="text-2xl text-gray-300 mx-auto mb-8 text-center leading-relaxed">
+            Watch these short demos to get started exploring the Paramilitary Leaks
+          </p>
+        </div>
+
+        <!-- Video Grid -->
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 max-w-7xl mx-auto">
+          <!-- Video 1: Exploring the Feed -->
+          <div
+            class="bg-gray-800 rounded-xl overflow-hidden shadow-xl hover:shadow-2xl transition-all duration-300 hover:-translate-y-1 group demo-video-card">
+            <div class="relative aspect-[9/16] overflow-hidden video-container">
+              <div class="absolute inset-0 bg-gradient-to-br from-blue-900 to-gray-900"></div>
+              <!-- Placeholder for video - will be replaced with actual video later -->
+              <video class="w-full h-full object-cover demo-video" muted playsinline>
+                <source src="#" type="video/mp4">
+              </video>
+              <div
+                class="absolute inset-0 bg-gradient-to-t from-gray-900 via-gray-900/40 to-transparent opacity-80 group-hover:opacity-40 transition-opacity duration-300 video-overlay">
+              </div>
+              <button
+                class="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-blue-500 hover:bg-blue-600 text-white p-4 rounded-full shadow-lg transition-transform duration-300 group-hover:scale-110 video-play-button">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10" viewBox="0 0 20 20" fill="currentColor">
+                  <path fill-rule="evenodd"
+                    d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z"
+                    clip-rule="evenodd" />
+                </svg>
+              </button>
+            </div>
+            <div class="p-6">
+              <h3 class="text-2xl font-bold text-white mb-2 tracking-tight">Exploring the Feed</h3>
+              <p class="text-gray-300 mb-4">See how to navigate through the chronological message feed and filter by
+                date, sender, or keywords.</p>
+              <div class="text-blue-400 text-sm font-medium">1:32</div>
+            </div>
+          </div>
+
+          <!-- Video 2: File Search & Visualization -->
+          <div
+            class="bg-gray-800 rounded-xl overflow-hidden shadow-xl hover:shadow-2xl transition-all duration-300 hover:-translate-y-1 group demo-video-card">
+            <div class="relative aspect-[9/16] overflow-hidden video-container">
+              <div class="absolute inset-0 bg-gradient-to-br from-purple-900 to-gray-900"></div>
+              <!-- Placeholder for video - will be replaced with actual video later -->
+              <video class="w-full h-full object-cover demo-video" muted playsinline>
+                <source src="#" type="video/mp4">
+              </video>
+              <div
+                class="absolute inset-0 bg-gradient-to-t from-gray-900 via-gray-900/40 to-transparent opacity-80 group-hover:opacity-40 transition-opacity duration-300 video-overlay">
+              </div>
+              <button
+                class="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-blue-500 hover:bg-blue-600 text-white p-4 rounded-full shadow-lg transition-transform duration-300 group-hover:scale-110 video-play-button">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10" viewBox="0 0 20 20" fill="currentColor">
+                  <path fill-rule="evenodd"
+                    d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z"
+                    clip-rule="evenodd" />
+                </svg>
+              </button>
+            </div>
+            <div class="p-6">
+              <h3 class="text-2xl font-bold text-white mb-2 tracking-tight">File Search & Visualization</h3>
+              <p class="text-gray-300 mb-4">Learn how to search through the file repository and use the interactive
+                visualizations.</p>
+              <div class="text-blue-400 text-sm font-medium">2:14</div>
+            </div>
+          </div>
+
+          <!-- Video 3: Sender Analysis -->
+          <div
+            class="bg-gray-800 rounded-xl overflow-hidden shadow-xl hover:shadow-2xl transition-all duration-300 hover:-translate-y-1 group demo-video-card">
+            <div class="relative aspect-[9/16] overflow-hidden video-container">
+              <div class="absolute inset-0 bg-gradient-to-br from-green-900 to-gray-900"></div>
+              <!-- Placeholder for video - will be replaced with actual video later -->
+              <video class="w-full h-full object-cover demo-video" muted playsinline>
+                <source src="#" type="video/mp4">
+              </video>
+              <div
+                class="absolute inset-0 bg-gradient-to-t from-gray-900 via-gray-900/40 to-transparent opacity-80 group-hover:opacity-40 transition-opacity duration-300 video-overlay">
+              </div>
+              <button
+                class="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-blue-500 hover:bg-blue-600 text-white p-4 rounded-full shadow-lg transition-transform duration-300 group-hover:scale-110 video-play-button">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10" viewBox="0 0 20 20" fill="currentColor">
+                  <path fill-rule="evenodd"
+                    d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z"
+                    clip-rule="evenodd" />
+                </svg>
+              </button>
+            </div>
+            <div class="p-6">
+              <h3 class="text-2xl font-bold text-white mb-2 tracking-tight">Sender Analysis</h3>
+              <p class="text-gray-300 mb-4">Discover patterns in communication by analyzing individual senders and
+                their
+                networks.</p>
+              <div class="text-blue-400 text-sm font-medium">1:48</div>
+            </div>
+          </div>
+
+          <!-- Video 4: Network Graph -->
+          <div
+            class="bg-gray-800 rounded-xl overflow-hidden shadow-xl hover:shadow-2xl transition-all duration-300 hover:-translate-y-1 group demo-video-card">
+            <div class="relative aspect-[9/16] overflow-hidden video-container">
+              <div class="absolute inset-0 bg-gradient-to-br from-red-900 to-gray-900"></div>
+              <!-- Placeholder for video - will be replaced with actual video later -->
+              <video class="w-full h-full object-cover demo-video" muted playsinline>
+                <source src="#" type="video/mp4">
+              </video>
+              <div
+                class="absolute inset-0 bg-gradient-to-t from-gray-900 via-gray-900/40 to-transparent opacity-80 group-hover:opacity-40 transition-opacity duration-300 video-overlay">
+              </div>
+              <button
+                class="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-blue-500 hover:bg-blue-600 text-white p-4 rounded-full shadow-lg transition-transform duration-300 group-hover:scale-110 video-play-button">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10" viewBox="0 0 20 20" fill="currentColor">
+                  <path fill-rule="evenodd"
+                    d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z"
+                    clip-rule="evenodd" />
+                </svg>
+              </button>
+            </div>
+            <div class="p-6">
+              <h3 class="text-2xl font-bold text-white mb-2 tracking-tight">Network Graph</h3>
+              <p class="text-gray-300 mb-4">Explore connections between different militia members using the
+                interactive
+                network visualization.</p>
+              <div class="text-blue-400 text-sm font-medium">2:05</div>
+            </div>
+          </div>
+
+          <!-- Video 5: Advanced Search Techniques -->
+          <div
+            class="bg-gray-800 rounded-xl overflow-hidden shadow-xl hover:shadow-2xl transition-all duration-300 hover:-translate-y-1 group demo-video-card">
+            <div class="relative aspect-[9/16] overflow-hidden video-container">
+              <div class="absolute inset-0 bg-gradient-to-br from-yellow-800 to-gray-900"></div>
+              <!-- Placeholder for video - will be replaced with actual video later -->
+              <video class="w-full h-full object-cover demo-video" muted playsinline>
+                <source src="#" type="video/mp4">
+              </video>
+              <div
+                class="absolute inset-0 bg-gradient-to-t from-gray-900 via-gray-900/40 to-transparent opacity-80 group-hover:opacity-40 transition-opacity duration-300 video-overlay">
+              </div>
+              <button
+                class="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-blue-500 hover:bg-blue-600 text-white p-4 rounded-full shadow-lg transition-transform duration-300 group-hover:scale-110 video-play-button">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10" viewBox="0 0 20 20" fill="currentColor">
+                  <path fill-rule="evenodd"
+                    d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z"
+                    clip-rule="evenodd" />
+                </svg>
+              </button>
+            </div>
+            <div class="p-6">
+              <h3 class="text-2xl font-bold text-white mb-2 tracking-tight">Advanced Search Techniques</h3>
+              <p class="text-gray-300 mb-4">Master advanced search queries to find specific content across the entire
+                dataset.</p>
+              <div class="text-blue-400 text-sm font-medium">1:56</div>
+            </div>
+          </div>
+
+          <!-- Video 6: Timeline Analysis -->
+          <div
+            class="bg-gray-800 rounded-xl overflow-hidden shadow-xl hover:shadow-2xl transition-all duration-300 hover:-translate-y-1 group demo-video-card">
+            <div class="relative aspect-[9/16] overflow-hidden video-container">
+              <div class="absolute inset-0 bg-gradient-to-br from-indigo-900 to-gray-900"></div>
+              <!-- Placeholder for video - will be replaced with actual video later -->
+              <video class="w-full h-full object-cover demo-video" muted playsinline>
+                <source src="#" type="video/mp4">
+              </video>
+              <div
+                class="absolute inset-0 bg-gradient-to-t from-gray-900 via-gray-900/40 to-transparent opacity-80 group-hover:opacity-40 transition-opacity duration-300 video-overlay">
+              </div>
+              <button
+                class="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-blue-500 hover:bg-blue-600 text-white p-4 rounded-full shadow-lg transition-transform duration-300 group-hover:scale-110 video-play-button">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10" viewBox="0 0 20 20" fill="currentColor">
+                  <path fill-rule="evenodd"
+                    d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z"
+                    clip-rule="evenodd" />
+                </svg>
+              </button>
+            </div>
+            <div class="p-6">
+              <h3 class="text-2xl font-bold text-white mb-2 tracking-tight">Timeline Analysis</h3>
+              <p class="text-gray-300 mb-4">Track how events unfolded over time and identify significant communication
+                patterns.</p>
+              <div class="text-blue-400 text-sm font-medium">2:22</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Call to Action -->
+        <div class="mt-20 text-center">
+          <h3 class="text-3xl font-bold text-white mb-6">Ready to Dive Deeper?</h3>
+          <p class="text-xl text-gray-300 max-w-3xl mx-auto mb-10">
+            Start exploring the full dataset and discover the inner workings of these paramilitary organizations.
+          </p>
+          <div class="flex flex-wrap gap-6 justify-center">
+            <NuxtLink to="/feed"
+              class="px-8 py-4 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors text-lg font-medium shadow-lg hover:shadow-xl">
+              Start Exploring
+            </NuxtLink>
+            <a href="https://github.com/ddosecrets/paramilitary-leaks" target="_blank" rel="noopener"
+              class="px-8 py-4 bg-gray-700 hover:bg-gray-600 text-white rounded-lg transition-colors text-lg font-medium shadow-lg hover:shadow-xl">
+              Download Raw Data
+            </a>
           </div>
         </div>
       </div>
@@ -232,6 +548,7 @@ import VideoSection from '~/components/narrative/VideoSection.vue'
 import StatsSection from '~/components/narrative/StatsSection.vue'
 import StorySection from '~/components/narrative/StorySection.vue'
 import StreamGraph from '~/components/metadata/StreamGraph.vue'
+import ScrollStreamGraph from '~/components/narrative/ScrollStreamGraph.vue'
 
 // State variables - define ALL refs at the top of the component
 const loading = ref(true)
@@ -260,6 +577,9 @@ const streamingProgress = reactive({
 })
 const storyScrollProgress = ref(0) // Track scroll progress for story section
 const visualizationZoomLevel = ref(0) // Track zoom level for the scatterplot
+const scrollGraphProgress = ref(0) // Track scroll progress for the ScrollStreamGraph
+const demoSectionRef = ref(null) // Reference to the demo video section
+const demoVideos = ref([]) // References to the demo videos
 
 // Component refs
 const heroSection = ref(null)
@@ -267,6 +587,11 @@ const videoSection = ref(null)
 const statsSection = ref(null)
 const storyContainer = ref(null)
 const storySection = ref(null)
+const scrollGraphSection = ref(null)
+const sourceInfoSection = ref(null) // New ref for source info section
+
+// State for fade-in effect
+const sourceInfoVisible = ref(false)
 
 // Calculated date range in days
 const dateRange = computed(() => {
@@ -293,6 +618,8 @@ const navSections = [
   { title: 'Inside the Network', ref: videoSection },
   { title: 'The Archive', ref: statsSection },
   { title: 'The Investigation', ref: storySection },
+  { title: 'Key Events', ref: scrollGraphSection },
+  { title: 'How To Use', ref: demoSectionRef },
   { title: 'The Legacy', ref: null }
 ]
 
@@ -333,6 +660,22 @@ const computeZoomLevel = (progress) => {
   // Start at 0.5 and go to 1.0
   return 0.5 + (normalizedProgress * 0.5);
 };
+
+// Calculate overall scroll progress as percentage
+const scrollProgress = computed(() => {
+  if (typeof window === 'undefined') return 0;
+
+  const scrollPosition = window.scrollY;
+  const documentHeight = document.documentElement.scrollHeight;
+  const windowHeight = window.innerHeight;
+  const scrollableHeight = documentHeight - windowHeight;
+
+  // Calculate percentage scrolled
+  const percentage = (scrollPosition / scrollableHeight) * 100;
+
+  // Return clamped value between 0 and 100
+  return Math.min(100, Math.max(0, percentage));
+});
 
 // Handle section change from nav component
 function handleSectionChange(sectionRef) {
@@ -490,8 +833,9 @@ function processDataForStreamgraph(data) {
   if (!data || !data.length) return []
 
   // Filter data to specific date range (May 2021 to May 2023) for narrative page
-  const startDate = new Date('2021-05-01')
-  const endDate = new Date('2023-05-31')
+  // Expanded date range slightly to capture more context
+  const startDate = new Date('2021-03-01')
+  const endDate = new Date('2023-06-30')
 
   // Filter data by date range
   const filteredData = data.filter(d => {
@@ -523,7 +867,7 @@ function processDataForStreamgraph(data) {
   // Sort by count and get top senders
   const topSenderNames = Object.entries(senderCounts)
     .sort((a, b) => b[1] - a[1])
-    .slice(0, 100) // Increased from 10 to 100 for better visualization
+    .slice(0, 120) // Increased from 100 to 120 for better visualization
     .map(([name]) => name)
 
   // Group messages by week and sender
@@ -667,11 +1011,60 @@ function updateScrollProgress() {
     visualizationZoomLevel.value = computeZoomLevel(progress);
 
     // Only show the scatterplot when we're actually in the story section
-    if (window.scrollY < window.innerHeight * 0.8) {
+    if (window.scrollY < window.innerHeight * 0.6) { // Adjusted threshold
       // If we're still in the hero section viewport, force progress to 0
       storyScrollProgress.value = 0;
       visualizationZoomLevel.value = 0;
     }
+  }
+
+  // Check if stats elements should animate
+  animateCounters();
+
+  // Calculate scroll progress for the ScrollStreamGraph section - adjusted for taller section
+  if (scrollGraphSection.value) {
+    const rect = scrollGraphSection.value.getBoundingClientRect();
+    const windowHeight = window.innerHeight;
+
+    // Calculate the total scrollable height of the section (now 8x viewport height)
+    const sectionHeight = scrollGraphSection.value.offsetHeight;
+
+    // We want to start when the section is just coming into view from the bottom
+    // and complete when it's scrolled almost completely off the top
+    const sectionTopPos = rect.top;
+    const sectionBottomPos = rect.bottom;
+
+    // Calculate how far the section has been scrolled through with a more gradual curve
+    let progress = 0;
+
+    // Start when section enters view (bottom of viewport)
+    if (sectionTopPos < windowHeight) {
+      // Calculate how far we've scrolled through the section
+      // Use a more gradual approach that doesn't reach 1.0 until very end
+
+      // How much of section has scrolled past the top of viewport
+      const scrolledPastTop = Math.max(0, -sectionTopPos);
+
+      // Calculate scrollable area (section height minus 2.5 viewport heights to give more margin)
+      const scrollableArea = Math.max(sectionHeight - windowHeight * 2.5, windowHeight * 3.5);
+
+      // Calculate progress with more gradual curve
+      // This ensures we don't reach progress=1 until almost the entire section is off screen
+      progress = Math.min(0.95, Math.pow(scrolledPastTop / scrollableArea, 0.75));
+
+      // Less verbose debugging in production
+      if (process.env.NODE_ENV !== 'production' && Math.random() < 0.01) {
+        console.log(`ScrollGraph progress: ${progress.toFixed(2)}, top: ${sectionTopPos}, scrolled: ${scrolledPastTop}/${scrollableArea}`);
+      }
+    }
+
+    // Make sure progress is 0 when section not yet in view
+    if (sectionTopPos >= windowHeight) {
+      progress = 0;
+    }
+
+    // Update the scrollGraphProgress value
+    scrollGraphProgress.value = progress;
   }
 }
 
@@ -712,14 +1105,311 @@ onMounted(() => {
       { name: 'section2', ref: videoSection },
       { name: 'section3', ref: statsSection },
       { name: 'section4', ref: storySection, threshold: 0.15 },
-      { name: 'section4Footer', ref: storySection, threshold: 0.7 }
+      { name: 'section5', ref: scrollGraphSection, threshold: 0.2 },
+      { name: 'section4Footer', ref: storySection, threshold: 0.7 },
+      { name: 'section6', ref: demoSectionRef, threshold: 0.2 }
     ])
+
+    // Initialize demo video functionality
+    initializeDemoVideos()
+
+    // Create intersection observer for number counters
+    setupCounterObservers()
   })
 })
+
+// Set up counter animation observers
+function setupCounterObservers() {
+  // Wait for DOM to be ready
+  nextTick(() => {
+    // Find elements with the counter-value attribute
+    const counterElements = document.querySelectorAll('[data-counter-value]');
+
+    // If no elements, exit
+    if (!counterElements.length) return;
+
+    // Create intersection observer
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          // Start animation when element is visible
+          startCounterAnimation(entry.target);
+          // Unobserve after animation starts
+          observer.unobserve(entry.target);
+        }
+      });
+    }, { threshold: 0.2 });
+
+    // Observe all counter elements
+    counterElements.forEach(el => observer.observe(el));
+
+    // Setup source info section observer
+    if (sourceInfoSection.value) {
+      const sourceObserver = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+          if (entry.isIntersecting) {
+            sourceInfoVisible.value = true;
+            sourceObserver.unobserve(entry.target);
+          }
+        });
+      }, { threshold: 0.15 });
+
+      sourceObserver.observe(sourceInfoSection.value);
+    }
+  });
+}
+
+// Animate a specific counter element
+function startCounterAnimation(element) {
+  const targetValue = parseInt(element.getAttribute('data-counter-value'), 10);
+  const duration = 2000; // Animation duration in ms
+  const startTime = performance.now();
+  const startValue = 0;
+
+  // Add animation class
+  element.classList.add('animating');
+
+  // Animation function
+  function updateCounter(currentTime) {
+    const elapsed = currentTime - startTime;
+    const progress = Math.min(elapsed / duration, 1);
+
+    // Use easeOutQuart for natural slowing effect
+    const easeProgress = 1 - Math.pow(1 - progress, 4);
+
+    // Calculate current value
+    const currentValue = Math.floor(startValue + (targetValue - startValue) * easeProgress);
+
+    // Format with commas
+    element.textContent = new Intl.NumberFormat().format(currentValue);
+
+    // Continue animation if not complete
+    if (progress < 1) {
+      requestAnimationFrame(updateCounter);
+    } else {
+      element.classList.remove('animating');
+      element.classList.add('completed');
+    }
+  }
+
+  requestAnimationFrame(updateCounter);
+}
+
+// Check which counters are visible and should animate
+function animateCounters() {
+  // Check if we need to initialize observers
+  if (!document.querySelector('[data-counter-value]')) {
+    // Convert appropriate elements to counter elements
+    convertToCounters();
+  }
+}
+
+// Convert stats elements to counter elements
+function convertToCounters() {
+  // Find stats containers and convert to counters
+  nextTick(() => {
+    // Find elements that should become counters
+    const statsElements = document.querySelectorAll('.stats-value:not([data-counter-value])');
+
+    statsElements.forEach(el => {
+      // Get the current text value and clean it
+      const currentText = el.textContent.trim();
+      const numericValue = parseInt(currentText.replace(/,/g, ''), 10);
+
+      // Only proceed if we have a valid number
+      if (!isNaN(numericValue)) {
+        // Store original value as attribute
+        el.setAttribute('data-counter-value', numericValue);
+        // Reset displayed value to 0
+        el.textContent = '0';
+        // Add counter class
+        el.classList.add('counter-ready');
+      }
+    });
+
+    // Now set up observers for new elements
+    setupCounterObservers();
+  });
+}
 
 // Add resize handler
 function handleResize() {
   // Any global resize handling needed
+}
+
+// Function to handle demo video playback
+function initializeDemoVideos() {
+  // Wait for DOM to be fully loaded
+  nextTick(() => {
+    // Collect all demo video elements
+    const videoElements = document.querySelectorAll('.demo-video');
+    const videoContainers = document.querySelectorAll('.video-container');
+
+    // Store references to video elements
+    demoVideos.value = Array.from(videoElements);
+
+    // Add click listeners to all video cards
+    const videoCards = document.querySelectorAll('.demo-video-card');
+    videoCards.forEach((card, index) => {
+      card.addEventListener('click', (event) => {
+        event.preventDefault();
+        handleDemoCardClick(index);
+      });
+    });
+
+    // Track video progress on timeupdate events
+    demoVideos.value.forEach((video, index) => {
+      video.addEventListener('timeupdate', () => {
+        if (videoContainers[index]) {
+          // Set the progress as a CSS variable
+          const progress = video.currentTime / video.duration;
+          videoContainers[index].style.setProperty('--video-progress', progress);
+        }
+      });
+
+      // Handle video end
+      video.addEventListener('ended', () => {
+        if (videoContainers[index]) {
+          videoContainers[index].classList.remove('playing');
+          const playButton = videoContainers[index].querySelector('.video-play-button');
+          if (playButton) playButton.classList.remove('hidden');
+        }
+      });
+    });
+
+    // Set up a simple intersection observer for streamgraph intro
+    const streamGraphIntroEl = document.getElementById('streamGraphIntro');
+    if (streamGraphIntroEl) {
+      const observer = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+          if (entry.isIntersecting) {
+            streamGraphIntroEl.classList.add('opacity-100', 'translate-y-0');
+            observer.unobserve(entry.target);
+          }
+        });
+      }, { threshold: 0.2 });
+
+      observer.observe(streamGraphIntroEl);
+    }
+  });
+}
+
+// Handle demo card click
+function handleDemoCardClick(index) {
+  if (index < 0 || index >= demoVideos.value.length) return;
+
+  const video = demoVideos.value[index];
+  const videoContainers = document.querySelectorAll('.video-container');
+  const videoContainer = videoContainers[index];
+  const playButton = videoContainer.querySelector('.video-play-button');
+
+  // Since we don't have actual videos yet, just show a placeholder animation
+  if (video.src === '' || video.src.endsWith('#')) {
+    // If no real video, toggle a simulated playing state
+    if (videoContainer.classList.contains('playing')) {
+      // "Stop" the simulated video
+      videoContainer.classList.remove('playing');
+      playButton.classList.remove('hidden');
+
+      // Reset the progress bar
+      videoContainer.style.setProperty('--video-progress', 0);
+    } else {
+      // Pause any other "playing" videos
+      document.querySelectorAll('.video-container.playing').forEach(container => {
+        container.classList.remove('playing');
+        const btn = container.querySelector('.video-play-button');
+        if (btn) btn.classList.remove('hidden');
+      });
+
+      // "Play" the simulated video
+      videoContainer.classList.add('playing');
+      playButton.classList.add('hidden');
+
+      // Animate the progress bar over 5 seconds
+      let progress = 0;
+      const duration = 5000; // 5 seconds for demo
+      const interval = 50; // Update every 50ms
+      const increment = interval / duration;
+
+      const progressInterval = setInterval(() => {
+        progress += increment;
+        videoContainer.style.setProperty('--video-progress', progress);
+
+        if (progress >= 1) {
+          clearInterval(progressInterval);
+          // "End" the simulated video
+          setTimeout(() => {
+            videoContainer.classList.remove('playing');
+            playButton.classList.remove('hidden');
+          }, 300);
+        }
+      }, interval);
+
+      // Show a message that this is just a placeholder
+      const notification = document.createElement('div');
+      notification.className = 'fixed top-4 left-1/2 transform -translate-x-1/2 bg-blue-600 text-white px-4 py-3 rounded-lg shadow-lg z-50';
+      notification.innerHTML = 'Demo videos coming soon! This is just a placeholder animation.';
+      document.body.appendChild(notification);
+
+      setTimeout(() => {
+        notification.style.opacity = '0';
+        notification.style.transition = 'opacity 0.5s ease';
+        setTimeout(() => notification.remove(), 500);
+      }, 3000);
+    }
+    return;
+  }
+
+  // If video is already playing, pause it
+  if (!video.paused) {
+    video.pause();
+    videoContainer.classList.remove('playing');
+    playButton.classList.remove('hidden');
+    return;
+  }
+
+  // Pause any other playing videos
+  demoVideos.value.forEach((v, i) => {
+    if (i !== index && !v.paused) {
+      v.pause();
+      if (videoContainers[i]) {
+        videoContainers[i].classList.remove('playing');
+        const btn = videoContainers[i].querySelector('.video-play-button');
+        if (btn) btn.classList.remove('hidden');
+      }
+    }
+  });
+
+  // Play the selected video
+  videoContainer.classList.add('playing');
+  playButton.classList.add('hidden');
+
+  video.play()
+    .then(() => {
+      // Try to go fullscreen on mobile
+      if (window.innerWidth <= 768 && videoContainer.requestFullscreen) {
+        videoContainer.requestFullscreen().catch(err => {
+          console.log('Could not enter fullscreen mode:', err);
+        });
+      }
+    })
+    .catch(err => {
+      console.error('Error playing video:', err);
+      // Show a message to the user
+      videoContainer.classList.remove('playing');
+      playButton.classList.remove('hidden');
+
+      const notification = document.createElement('div');
+      notification.className = 'fixed top-4 left-1/2 transform -translate-x-1/2 bg-red-600 text-white px-4 py-3 rounded-lg shadow-lg z-50';
+      notification.innerHTML = 'Could not play video. Please try again by tapping directly on the play button.';
+      document.body.appendChild(notification);
+
+      setTimeout(() => {
+        notification.style.opacity = '0';
+        notification.style.transition = 'opacity 0.5s ease';
+        setTimeout(() => notification.remove(), 500);
+      }, 3000);
+    });
 }
 </script>
 
@@ -729,17 +1419,58 @@ body {
   overflow-x: hidden;
 }
 
+/* Typography enhancements */
+h2,
+h3,
+h4 {
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+}
+
+h2 {
+  font-weight: 800;
+}
+
+p {
+  line-height: 1.7;
+}
+
 .prose {
-  max-width: 100%;
+  max-width: 65ch;
+  margin-left: auto;
+  margin-right: auto;
 }
 
 .prose p {
-  margin-bottom: 1.5em;
+  margin-bottom: 1.8em;
 }
 
-/* For smooth scrolling */
+/* Magazine-style spacing - increased vertical spacing */
+section {
+  padding-top: 10rem;
+  padding-bottom: 10rem;
+  position: relative;
+  /* This helps with z-index stacking */
+}
+
+.container {
+  padding-left: 2rem;
+  padding-right: 2rem;
+}
+
+/* Extra max-width constraints to control line lengths */
+.max-w-prose {
+  max-width: 65ch;
+}
+
+.max-w-narrow {
+  max-width: 45ch;
+}
+
+/* For smooth scrolling - improved timing */
 html {
   scroll-behavior: smooth;
+  scrollbar-color: rgba(45, 55, 72, 0.3) rgba(17, 24, 39, 0.8);
 }
 
 /* Add subtle pulsing background effect to cards on hover */
@@ -770,7 +1501,12 @@ html {
   text-shadow: 0 0 4px rgba(0, 0, 0, 0.8), 0 0 20px rgba(0, 0, 0, 0.6);
 }
 
-/* Animation styles - needed for all components */
+/* Improved text readability */
+.text-gray-300 {
+  color: rgba(209, 213, 219, 0.95);
+}
+
+/* Animation styles - improved animation timing */
 @keyframes pulse {
 
   0%,
@@ -789,15 +1525,15 @@ html {
 
 /* Improved transitions for scroll animations */
 .transform {
-  transition: transform 0.6s cubic-bezier(0.22, 1, 0.36, 1),
-    opacity 0.6s cubic-bezier(0.22, 1, 0.36, 1);
+  transition: transform 0.7s cubic-bezier(0.22, 1, 0.36, 1),
+    opacity 0.7s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
-/* Fade+slide animations with different directions */
+/* Fade+slide animations with different directions - slowed down slightly for more presence */
 .fade-up {
   opacity: 0;
   transform: translateY(40px);
-  transition: opacity 0.8s ease, transform 0.8s cubic-bezier(0.13, 0.8, 0.4, 1);
+  transition: opacity 0.9s ease, transform 0.9s cubic-bezier(0.13, 0.8, 0.4, 1);
 }
 
 .fade-up.visible {
@@ -808,7 +1544,7 @@ html {
 .fade-left {
   opacity: 0;
   transform: translateX(40px);
-  transition: opacity 0.8s ease, transform 0.8s cubic-bezier(0.13, 0.8, 0.4, 1);
+  transition: opacity 0.9s ease, transform 0.9s cubic-bezier(0.13, 0.8, 0.4, 1);
 }
 
 .fade-left.visible {
@@ -819,7 +1555,7 @@ html {
 .fade-right {
   opacity: 0;
   transform: translateX(-40px);
-  transition: opacity 0.8s ease, transform 0.8s cubic-bezier(0.13, 0.8, 0.4, 1);
+  transition: opacity 0.9s ease, transform 0.9s cubic-bezier(0.13, 0.8, 0.4, 1);
 }
 
 .fade-right.visible {
@@ -827,11 +1563,55 @@ html {
   transform: translateX(0);
 }
 
+/* Additional section spacing for tablet and larger */
+@media (min-width: 768px) {
+  .container {
+    padding-left: 3rem;
+    padding-right: 3rem;
+  }
+
+  section {
+    padding-top: 12rem;
+    padding-bottom: 12rem;
+  }
+
+  h2 {
+    font-size: 3.75rem;
+  }
+
+  p {
+    font-size: 1.125rem;
+  }
+
+  /* Section transitions are more substantial on larger screens */
+  section+section::before {
+    top: -8rem;
+    height: 8rem;
+  }
+}
+
+/* Ensure smooth performance on mobile */
+@media (max-width: 767px) {
+  .stagger-item {
+    opacity: 1;
+    transform: none;
+  }
+
+  .scale-up,
+  .fade-up,
+  .fade-left,
+  .fade-right {
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
+}
+
 /* Scale animations */
 .scale-up {
   opacity: 0;
   transform: scale(0.85);
-  transition: opacity 0.8s ease, transform 0.8s cubic-bezier(0.13, 0.8, 0.4, 1);
+  transition: opacity 0.9s ease, transform 0.9s cubic-bezier(0.13, 0.8, 0.4, 1);
 }
 
 .scale-up.visible {
@@ -846,7 +1626,7 @@ html {
 }
 
 .stagger-item.visible {
-  animation: staggerFadeIn 0.8s forwards;
+  animation: staggerFadeIn 0.9s forwards;
 }
 
 @keyframes staggerFadeIn {
@@ -865,8 +1645,8 @@ html {
 .build-in-left {
   transform: translateX(-100%);
   opacity: 0;
-  transition: transform 1.2s cubic-bezier(0.19, 1, 0.22, 1),
-    opacity 0.5s ease 0.3s;
+  transition: transform 1.4s cubic-bezier(0.19, 1, 0.22, 1),
+    opacity 0.6s ease 0.3s;
 }
 
 .build-in-left.visible {
@@ -877,8 +1657,8 @@ html {
 .build-in-right {
   transform: translateX(100%);
   opacity: 0;
-  transition: transform 1.2s cubic-bezier(0.19, 1, 0.22, 1),
-    opacity 0.5s ease 0.3s;
+  transition: transform 1.4s cubic-bezier(0.19, 1, 0.22, 1),
+    opacity 0.6s ease 0.3s;
 }
 
 .build-in-right.visible {
@@ -901,7 +1681,7 @@ html {
   height: 100%;
   background: #1f2937;
   transform: translateX(0);
-  transition: transform 1.2s cubic-bezier(0.77, 0, 0.18, 1);
+  transition: transform 1.4s cubic-bezier(0.77, 0, 0.18, 1);
 }
 
 .reveal-text.visible::after {
@@ -912,7 +1692,7 @@ html {
 .count-animate {
   opacity: 0;
   transform: translateY(10px);
-  transition: opacity 0.4s ease, transform 0.4s ease;
+  transition: opacity 0.5s ease, transform 0.5s ease;
 }
 
 .count-animate.visible {
@@ -924,7 +1704,7 @@ html {
 .draw-path {
   stroke-dasharray: 1000;
   stroke-dashoffset: 1000;
-  transition: stroke-dashoffset 2s ease-in-out;
+  transition: stroke-dashoffset 2.5s ease-in-out;
 }
 
 .draw-path.visible {
@@ -971,4 +1751,6 @@ html {
 .delay-1000 {
   transition-delay: 1000ms;
 }
+
+/* Magazine-style layout enhancements */
 </style>

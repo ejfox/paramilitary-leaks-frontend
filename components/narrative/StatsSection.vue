@@ -15,30 +15,63 @@
         </div>
       </slot>
 
-      <!-- Stats cards -->
+      <!-- Stats cards with enhanced animations -->
       <div class="grid grid-cols-1 md:grid-cols-3 gap-6 my-12">
-        <div ref="statsItems[0]" class="bg-gray-800/50 p-5 rounded-lg">
-          <div class="text-center">
-            <span class="text-4xl font-light text-blue-400 counter-value" :data-value="stats.messages">0</span>
-            <div class="text-sm text-gray-300 mt-2">
+        <!-- Messages stat card -->
+        <div ref="statsItems[0]"
+          class="stats-card-container bg-gray-800/30 backdrop-blur-sm p-5 rounded-lg border border-gray-800/50 relative overflow-hidden group">
+          <!-- NYTimes style vertical indicator line on hover -->
+          <div
+            class="absolute left-0 top-0 bottom-0 w-0.5 bg-blue-400 transform scale-y-0 group-hover:scale-y-100 transition-transform duration-500 origin-top">
+          </div>
+
+          <div class="text-center relative">
+            <div class="absolute -top-1 right-4 text-[10px] uppercase tracking-widest text-blue-400/70 font-medium">01
+            </div>
+            <div class="text-sm text-gray-400 mb-2 uppercase tracking-wider">
               <slot name="messages-label">Private Messages</slot>
             </div>
+            <span class="stats-value text-4xl font-light text-blue-400 counter-value"
+              :data-value="stats.messages">0</span>
           </div>
         </div>
-        <div ref="statsItems[1]" class="bg-gray-800/50 p-5 rounded-lg">
-          <div class="text-center">
-            <span class="text-4xl font-light text-purple-400 counter-value" :data-value="stats.members">0</span>
-            <div class="text-sm text-gray-300 mt-2">
+
+        <!-- Members stat card -->
+        <div ref="statsItems[1]"
+          class="stats-card-container bg-gray-800/30 backdrop-blur-sm p-5 rounded-lg border border-gray-800/50 relative overflow-hidden group">
+          <!-- NYTimes style vertical indicator line on hover -->
+          <div
+            class="absolute left-0 top-0 bottom-0 w-0.5 bg-purple-400 transform scale-y-0 group-hover:scale-y-100 transition-transform duration-500 origin-top">
+          </div>
+
+          <div class="text-center relative">
+            <div class="absolute -top-1 right-4 text-[10px] uppercase tracking-widest text-purple-400/70 font-medium">02
+            </div>
+            <div class="text-sm text-gray-400 mb-2 uppercase tracking-wider">
               <slot name="members-label">Network Members</slot>
             </div>
+            <span class="stats-value text-4xl font-light text-purple-400 counter-value"
+              :data-value="stats.members">0</span>
           </div>
         </div>
-        <div ref="statsItems[2]" class="bg-gray-800/50 p-5 rounded-lg">
-          <div class="text-center">
-            <span class="text-4xl font-light text-green-400 counter-value" :data-value="stats.files">0</span>
-            <div class="text-sm text-gray-300 mt-2">
-              <slot name="files-label">Media Files</slot> ({{ stats.fileSize }})
+
+        <!-- Files stat card -->
+        <div ref="statsItems[2]"
+          class="stats-card-container bg-gray-800/30 backdrop-blur-sm p-5 rounded-lg border border-gray-800/50 relative overflow-hidden group">
+          <!-- NYTimes style vertical indicator line on hover -->
+          <div
+            class="absolute left-0 top-0 bottom-0 w-0.5 bg-green-400 transform scale-y-0 group-hover:scale-y-100 transition-transform duration-500 origin-top">
+          </div>
+
+          <div class="text-center relative">
+            <div class="absolute -top-1 right-4 text-[10px] uppercase tracking-widest text-green-400/70 font-medium">03
             </div>
+            <div class="text-sm text-gray-400 mb-2 uppercase tracking-wider">
+              <slot name="files-label">Media Files</slot>
+            </div>
+            <span class="stats-value text-4xl font-light text-green-400 counter-value"
+              :data-value="stats.files">0</span>
+            <div class="text-xs text-gray-500 mt-1">({{ stats.fileSize }})</div>
           </div>
         </div>
       </div>
@@ -90,6 +123,11 @@ function animateCounter(element, targetValue, duration = 1500) {
 
     if (progress < 1) {
       requestAnimationFrame(updateCounter)
+    } else {
+      // Add finish class after animation completes
+      setTimeout(() => {
+        element.classList.add('counter-finished')
+      }, 500)
     }
   }
 
@@ -100,25 +138,31 @@ function animateCounter(element, targetValue, duration = 1500) {
 function setupAnimations() {
   nextTick(() => {
     const counterElements = document.querySelectorAll('.counter-value')
+    const containers = document.querySelectorAll('.stats-card-container')
 
+    // Set up container animations
+    containers.forEach((container, index) => {
+      observeElement(container, {
+        classes: ['stagger-item', 'visible'],
+        once: true,
+        threshold: 0.2,
+        onEnter: (el) => {
+          // Apply staggered delay
+          el.style.animationDelay = `${index * 150}ms`
+        }
+      })
+    })
+
+    // Set up counter animations
     counterElements.forEach((element, index) => {
-      if (element && element.parentElement && element.parentElement.parentElement) {
-        observeElement(element.parentElement.parentElement, {
-          classes: ['stagger-item', 'visible'],
-          once: true,
-          onEnter: (el) => {
-            // Apply staggered delay
-            el.style.animationDelay = `${index * 150}ms`
+      if (element) {
+        // Get the target value
+        const targetValue = parseInt(element.dataset.value || element.textContent.replace(/,/g, ''), 10)
 
-            // Get the target value
-            const targetValue = parseInt(element.dataset.value || element.textContent.replace(/,/g, ''), 10)
-
-            // Start counter animation
-            setTimeout(() => {
-              animateCounter(element, targetValue)
-            }, index * 150 + 300)
-          }
-        })
+        // Start counter animation with a staggered delay
+        setTimeout(() => {
+          animateCounter(element, targetValue, 2000)
+        }, 300 + index * 150)
       }
     })
   })
@@ -130,11 +174,9 @@ onMounted(() => {
 
 onBeforeUnmount(() => {
   // Clean up any animations or observers
-  const counterElements = document.querySelectorAll('.counter-value')
-  counterElements.forEach((element) => {
-    if (element && element.parentElement && element.parentElement.parentElement) {
-      unobserveElement(element.parentElement.parentElement)
-    }
+  const containers = document.querySelectorAll('.stats-card-container')
+  containers.forEach((element) => {
+    unobserveElement(element)
   })
 })
 </script>
@@ -160,5 +202,32 @@ onBeforeUnmount(() => {
 
 .stagger-item.visible {
   animation: staggerFadeIn 0.8s forwards;
+}
+
+/* NYTimes/Bloomberg style stats cards */
+.stats-card-container {
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+}
+
+.stats-card-container:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+  background-color: rgba(31, 41, 55, 0.5);
+}
+
+/* Counter animations */
+.counter-value {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum";
+  transition: color 0.3s ease, text-shadow 0.3s ease;
+}
+
+.counter-value:not(.counter-finished) {
+  text-shadow: 0 0 10px rgba(59, 130, 246, 0.5);
+}
+
+.stats-card-container:hover .counter-value {
+  text-shadow: 0 0 15px rgba(59, 130, 246, 0.7);
 }
 </style>
