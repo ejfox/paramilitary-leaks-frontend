@@ -3,7 +3,14 @@
     <!-- Video container -->
     <div ref="videoContainer" class="narrative-video-container" :class="{ 'video-fixed': shouldBeFixed }">
       <video ref="videoPlayer" class="narrative-video" muted playsinline preload="auto" @ended="videoEnded"
-        @error="handleVideoError" crossorigin="anonymous">
+        @error="handleVideoError" crossorigin="anonymous"
+        poster="https://res.cloudinary.com/ejf/video/upload/q_auto,f_auto,w_1280/so_auto,e_blur:400/v1742858893/PARALEAKS_COMP_SHORTER_jm8fjw.jpg">
+        <source
+          :src="'https://res.cloudinary.com/ejf/video/upload/q_auto:good,f_webm,w_1280,c_fill,g_center,vc_auto,br_2m/v1742858893/PARALEAKS_COMP_SHORTER_jm8fjw.webm'"
+          type="video/webm">
+        <source
+          :src="'https://res.cloudinary.com/ejf/video/upload/q_auto:good,f_mp4,w_1280,c_fill,g_center,vc_auto,br_2m/v1742858893/PARALEAKS_COMP_SHORTER_jm8fjw.mp4'"
+          type="video/mp4">
         <source :src="videoUrl.value" type="video/quicktime">
         <source :src="fallbackVideoUrl.value" type="video/mp4">
       </video>
@@ -160,7 +167,7 @@ const videoProgress = ref(0)
 
 // Updated Cloudinary URL with optimized parameters
 // Primary video: optimized for performance with lower resolution for faster loading
-const videoUrl = ref('https://res.cloudinary.com/ejf/video/upload/q_auto:good,f_auto,w_1280,c_fill,g_center,vc_auto/v1742858893/PARALEAKS_COMP_SHORTER_jm8fjw.mov')
+const videoUrl = ref('https://res.cloudinary.com/ejf/video/upload/q_auto:eco,f_auto,w_1280,c_fill,g_center,vc_auto/v1742858893/PARALEAKS_COMP_SHORTER_jm8fjw.mov')
 
 // Fallback video with progressive loading and different format options
 const fallbackVideoUrl = ref('https://res.cloudinary.com/ejf/video/upload/q_auto:eco,f_mp4,w_960,c_fill,g_center,vc_auto/v1742858893/PARALEAKS_COMP_SHORTER_jm8fjw.mp4')
@@ -190,7 +197,7 @@ const handleScroll = () => {
 
     // Adjust the release point to allow more natural scrolling at the end
     // Use a lower percentage to allow for natural scroll transition
-    const releasePoint = sectionTop + sectionHeight * 0.82 - viewportHeight
+    const releasePoint = sectionTop + sectionHeight * 0.9 - viewportHeight
     const transitionZone = viewportHeight * 2.5 // Extended transition zone for smoother fade
 
     if (scrollPosition >= sectionTop && scrollPosition < releasePoint) {
@@ -201,15 +208,20 @@ const handleScroll = () => {
       const scrollableDistance = releasePoint - sectionTop
       const scrolled = scrollPosition - sectionTop
 
-      // Use a more gradual progression curve
+      // MODIFIED: Add a dampening factor to slow down video progress relative to scroll
+      // Use a more gradual progression curve with slower coefficient
       let progress = Math.min(Math.max(scrolled / scrollableDistance, 0), 0.99)
 
-      // Apply slight easing to make the progress feel more natural
-      progress = Math.pow(progress, 0.9)
+      // Apply lighter easing to make the video pace more natural
+      progress = Math.pow(progress, 0.85)
 
-      // Only hold on last frame for final 5% of the scroll
+      // Adjust scaling to ensure video doesn't end too early
+      // This stretches the video playback across more scroll distance
+      progress = progress * 0.95 // Increased from 0.85 to extend duration
+
+      // Only hold on last frame for final 2% of the scroll
       const progressPercentage = scrolled / scrollableDistance
-      if (progressPercentage > 0.95) {
+      if (progressPercentage > 0.98) {
         progress = 0.99 // Lock to last frame when nearing release point
       }
 
@@ -324,7 +336,11 @@ const updateVideoProgress = () => {
 
     // Update video time if properly loaded
     if (videoPlayer.value.readyState >= 2 && !isNaN(videoPlayer.value.duration)) {
-      videoPlayer.value.currentTime = progress * videoPlayer.value.duration
+      // Apply the same slowdown formula for consistent speed across all updates
+      let adjustedProgress = Math.pow(progress, 0.85) * 0.95
+      // Cap at 0.99 to prevent potential issues at the very end
+      adjustedProgress = Math.min(adjustedProgress, 0.99)
+      videoPlayer.value.currentTime = adjustedProgress * videoPlayer.value.duration
     }
   } catch (error) {
     console.error('Error updating video progress:', error)

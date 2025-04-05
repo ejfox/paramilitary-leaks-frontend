@@ -1,6 +1,6 @@
 <template>
   <!-- Super simple: a tall container for scrolling with fixed positioning -->
-  <div ref="scrollContainer" class="w-full" style="height: 700vh;">
+  <div ref="scrollContainer" class="w-full" style="height: 920vh;">
     <!-- The fixed container that stays in place during scroll -->
     <div ref="fixedContainer" class="fixed top-0 left-0 w-full h-screen flex items-center justify-center bg-black"
       :style="{ opacity: isVisible ? 1 : 0 }" style="transition: opacity 0.3s ease;">
@@ -17,14 +17,29 @@
         <h3 class="text-2xl text-white font-bold">Communication Patterns Over Time</h3>
         <p class="text-gray-400 mt-2">Scroll to reveal more data</p>
       </div>
+
+      <!-- Legend for top 5 senders -->
+      <div ref="legendContainer" class="absolute bottom-10 right-10 bg-black/70 p-4 rounded-lg border border-gray-700">
+        <h4 class="text-white text-sm font-bold mb-2">Top 5 Senders</h4>
+        <div class="space-y-2">
+          <div v-for="(sender, index) in top5Senders" :key="index" class="flex items-center">
+            <div class="w-4 h-4 mr-2" :style="{ backgroundColor: sender.color }"></div>
+            <div class="text-white text-sm flex-1">{{ truncateName(sender.name, 20) }}</div>
+            <div class="text-gray-300 text-sm font-mono">
+              {{ getDisplayCount(sender.displayCount, sender.count) }}
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted, watch, computed, onBeforeUnmount } from 'vue'
+import { ref, onMounted, watch, computed, onBeforeUnmount, reactive } from 'vue'
 import * as d3 from 'd3'
 import { format } from 'date-fns'
+import { useColorMap } from '~/composables/useColorMap'
 
 const props = defineProps({
   messagesBySender: {
@@ -46,21 +61,117 @@ const props = defineProps({
 const scrollContainer = ref(null)
 const fixedContainer = ref(null)
 const streamContainer = ref(null)
+const legendContainer = ref(null)
 const isVisible = ref(false)
 let scrollTimeout = null
+const colorMap = useColorMap()
+
+// Store the top 5 senders with animated counts
+const top5Senders = ref([])
+// Animation interval
+let countAnimationInterval = null
 
 const visibleMonths = computed(() => {
-  // Start with at least 3 months, then add more as you scroll
+  // Start with just 1 month, then add more as you scroll
   const max = props.messagesBySender.length || 0
-  // Ensure we show more data earlier in the scroll, but still complete by the end
-  // This prevents early disappearance by being more gradual with the reveal
-  return Math.max(3, Math.min(max, Math.ceil((0.3 + props.scrollProgress * 0.7) * max)))
+  // Start with minimal data and reveal even more gradually
+  // Using a steeper power curve for an even slower start
+  const progress = Math.pow(props.scrollProgress, 2) // Steeper curve for even slower initial reveal
+  return Math.max(1, Math.min(max, Math.ceil((0.1 + progress * 0.9) * max)))
 })
 
-// Watch for changes in the visibleMonths or dataset to update the graph
+// Calculate top 5 senders from currently visible data
+function calculateTop5Senders() {
+  if (!props.messagesBySender?.length) return []
+
+  // Get the visible data slice
+  const visibleData = props.messagesBySender.slice(0, visibleMonths.value)
+
+  // Get all sender keys except 'date'
+  const senderKeys = Object.keys(visibleData[0] || {}).filter(key => key !== 'date')
+
+  // Calculate total counts for each sender within visible data
+  const senderCounts = {}
+  senderKeys.forEach(sender => {
+    senderCounts[sender] = visibleData.reduce((total, month) => total + (month[sender] || 0), 0)
+  })
+
+  // Convert to array, sort, and get top 5
+  const sortedSenders = Object.entries(senderCounts)
+    .map(([name, count]) => ({
+      name,
+      count,
+      displayCount: 0, // Start at 0 for animation
+      color: colorMap.getSenderColor(name)
+    }))
+    .sort((a, b) => b.count - a.count)
+    .slice(0, 5)
+
+  return sortedSenders
+}
+
+// Helper to get formatted count for display with animation
+function getDisplayCount(displayCount, targetCount) {
+  return displayCount.toLocaleString()
+}
+
+// Helper to truncate sender names
+function truncateName(name, maxLength) {
+  if (!name) return '';
+  return name.length > maxLength ? name.substring(0, maxLength) + '...' : name;
+}
+
+// Animate the count values
+function animateCounters() {
+  // Clear any existing animation
+  if (countAnimationInterval) {
+    clearInterval(countAnimationInterval)
+  }
+
+  // Get the latest top 5 senders
+  const newTop5 = calculateTop5Senders()
+
+  // Prepare the animation by setting initial values
+  // If we already have values, keep them as starting points
+  if (top5Senders.value.length) {
+    newTop5.forEach(sender => {
+      const existing = top5Senders.value.find(s => s.name === sender.name)
+      if (existing) {
+        sender.displayCount = existing.displayCount
+      }
+    })
+  }
+
+  // Update the ref with new data
+  top5Senders.value = newTop5
+
+  // Set up animation interval
+  countAnimationInterval = setInterval(() => {
+    let allDone = true
+
+    // Update each counter
+    top5Senders.value.forEach(sender => {
+      if (sender.displayCount < sender.count) {
+        // Calculate increment - faster for larger numbers
+        const increment = Math.max(1, Math.floor((sender.count - sender.displayCount) / 10))
+        sender.displayCount = Math.min(sender.count, sender.displayCount + increment)
+        allDone = false
+      }
+    })
+
+    // If all counters have reached their targets, stop the animation
+    if (allDone) {
+      clearInterval(countAnimationInterval)
+      countAnimationInterval = null
+    }
+  }, 50) // Update every 50ms
+}
+
+// Watch for changes in the visibleMonths or dataset to update the graph and legend
 watch([() => visibleMonths.value, () => props.messagesBySender], () => {
   if (props.messagesBySender.length > 0) {
     renderStreamGraph()
+    animateCounters() // Update and animate the counters
   }
 }, { immediate: true })
 
@@ -159,10 +270,7 @@ function renderStreamGraph() {
       .enter()
       .append("path")
       .attr("d", area)
-      .style("fill", (d, i) => {
-        const sender = props.topSenders.find(sender => sender.name === d.key)
-        return sender?.color || `hsl(${i * 30 % 360}, 70%, 50%)`
-      })
+      .style("fill", (d) => colorMap.getSenderColor(d.key))
       .style("opacity", 0.8)
 
     // Add simple X axis
@@ -227,12 +335,12 @@ function renderStreamGraph() {
         .style("stroke-width", 1)
         .style("stroke-dasharray", "3,3")
 
-      // Add annotation circle
+      // Add annotation circle - use consistent blue color
       svg.append("circle")
         .attr("cx", xPos)
         .attr("cy", innerHeight / 3)
         .attr("r", 6)
-        .style("fill", "#3b82f6")
+        .style("fill", "#3b82f6") // Consistent blue color
         .style("stroke", "white")
         .style("stroke-width", 2)
 
@@ -250,7 +358,7 @@ function renderStreamGraph() {
         .attr("height", boxHeight)
         .attr("rx", 5)
         .style("fill", "rgba(0, 0, 0, 0.75)")
-        .style("stroke", "#3b82f6")
+        .style("stroke", "#3b82f6") // Consistent blue color
         .style("stroke-width", 1)
 
       // Use foreignObject for proper text wrapping
@@ -270,8 +378,7 @@ function renderStreamGraph() {
         .style("box-sizing", "border-box")
         .style("color", "white")
         .style("text-align", "center")
-        .html(`
-          <div style="font-weight: bold; font-size: 14px; margin-bottom: 8px; color: white;">
+        .html(`          <div style="font-weight: bold; font-size: 14px; margin-bottom: 8px; color: white;">
             ${annotation.label}
           </div>
           <div style="font-size: 12px; line-height: 1.4; color: rgba(255, 255, 255, 0.9);">
@@ -290,6 +397,11 @@ onMounted(() => {
   window.addEventListener('scroll', handleScroll, { passive: true })
   window.addEventListener('resize', renderStreamGraph, { passive: true })
   handleScroll() // Initial check
+
+  // Initialize the top 5 senders
+  if (props.messagesBySender.length > 0) {
+    animateCounters()
+  }
 })
 
 onBeforeUnmount(() => {
@@ -297,6 +409,9 @@ onBeforeUnmount(() => {
   window.removeEventListener('resize', renderStreamGraph)
   if (scrollTimeout) {
     clearTimeout(scrollTimeout)
+  }
+  if (countAnimationInterval) {
+    clearInterval(countAnimationInterval)
   }
 })
 </script>

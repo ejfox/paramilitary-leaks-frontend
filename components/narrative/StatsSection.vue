@@ -31,8 +31,10 @@
             <div class="text-sm text-gray-400 mb-2 uppercase tracking-wider">
               <slot name="messages-label">Private Messages</slot>
             </div>
-            <span class="stats-value text-4xl font-light text-blue-400 counter-value"
-              :data-value="stats.messages">0</span>
+            <span class="stats-value text-4xl font-light text-blue-400"
+              :class="{ 'counter-value': !initialRender, 'counter-finished': initialRender }"
+              :data-value="stats.messages">{{ initialRender ? new Intl.NumberFormat().format(stats.messages) : '0'
+              }}</span>
           </div>
         </div>
 
@@ -50,8 +52,10 @@
             <div class="text-sm text-gray-400 mb-2 uppercase tracking-wider">
               <slot name="members-label">Network Members</slot>
             </div>
-            <span class="stats-value text-4xl font-light text-purple-400 counter-value"
-              :data-value="stats.members">0</span>
+            <span class="stats-value text-4xl font-light text-purple-400"
+              :class="{ 'counter-value': !initialRender, 'counter-finished': initialRender }"
+              :data-value="stats.members">{{ initialRender ? new Intl.NumberFormat().format(stats.members) : '0'
+              }}</span>
           </div>
         </div>
 
@@ -69,8 +73,9 @@
             <div class="text-sm text-gray-400 mb-2 uppercase tracking-wider">
               <slot name="files-label">Media Files</slot>
             </div>
-            <span class="stats-value text-4xl font-light text-green-400 counter-value"
-              :data-value="stats.files">0</span>
+            <span class="stats-value text-4xl font-light text-green-400"
+              :class="{ 'counter-value': !initialRender, 'counter-finished': initialRender }" :data-value="stats.files">{{
+                initialRender ? new Intl.NumberFormat().format(stats.files) : '0' }}</span>
             <div class="text-xs text-gray-500 mt-1">({{ stats.fileSize }})</div>
           </div>
         </div>
@@ -95,6 +100,22 @@ const props = defineProps({
       files: 52161,
       fileSize: '198.62 GB'
     })
+  },
+  rawData: {
+    type: Array,
+    default: () => []
+  },
+  messagesBySender: {
+    type: Array,
+    default: () => []
+  },
+  allSenders: {
+    type: Array,
+    default: () => []
+  },
+  initialRender: {
+    type: Boolean,
+    default: false
   }
 })
 
@@ -107,6 +128,13 @@ const { observeElement, unobserveElement } = useScrollAnimations()
 // Animation functions
 function animateCounter(element, targetValue, duration = 1500) {
   if (!element) return
+
+  // If we don't need animation or have no valid target, just set the value directly
+  if (props.initialRender || !targetValue || isNaN(targetValue)) {
+    element.textContent = new Intl.NumberFormat().format(targetValue || 0)
+    element.classList.add('counter-finished')
+    return
+  }
 
   const startValue = 0
   const startTime = performance.now()

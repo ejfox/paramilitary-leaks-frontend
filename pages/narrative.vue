@@ -34,8 +34,13 @@
       @cancel-streaming-points="cancelStreamingPoints" @update-video-progress="videoProgress = $event" />
 
     <!-- Stats section -->
-    <StatsSection ref="statsSection" :rawData="rawData" :messagesBySender="messagesBySender" :allSenders="allSenders"
-      :totalFileSize="totalFileSize" @update:top-days="handleTopDaysUpdate" />
+    <StatsSection ref="statsSection" :stats="{
+      messages: messageCount,
+      members: senderCount,
+      files: totalFiles,
+      fileSize: totalFileSize
+    }" :rawData="rawData" :messagesBySender="messagesBySender" :allSenders="allSenders"
+      @update:top-days="handleTopDaysUpdate" :initial-render="statsInitialized" />
 
     <!-- Transitional buffer section to improve scrolling timing after video ends -->
     <section class="min-h-[50vh] bg-gradient-to-b from-black/90 to-black relative z-10">
@@ -170,7 +175,8 @@
         <div class="bg-gray-900 p-8 rounded-lg shadow-lg mx-auto mb-16">
           <h3 class="text-2xl font-bold mb-6 text-white tracking-tight">Overall Communication Activity</h3>
           <StreamGraph v-if="messagesBySender.length > 0" :messagesBySender="messagesBySender"
-            :topSenders="allSendersExtended" class="w-full" style="min-height: 60vh" />
+            :topSenders="allSendersExtended" class="w-full" style="min-height: 60vh" :default-layout="'fill'"
+            @highlight-sender="handleSenderHighlight" @clear-highlight="handleClearHighlight" />
           <div v-else class="h-96 flex items-center justify-center">
             <div class="text-gray-400 flex flex-col items-center">
               <svg class="animate-spin mb-4 h-8 w-8 text-blue-500" xmlns="http://www.w3.org/2000/svg" fill="none"
@@ -183,6 +189,23 @@
               <span>Loading data visualization...</span>
             </div>
           </div>
+
+          <!-- Note about deleted accounts -->
+          <div class="mt-4 bg-blue-900/30 border border-blue-800/50 text-blue-100 p-3 rounded-md text-sm">
+            <div class="flex items-start">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2 flex-shrink-0 text-blue-300 mt-0.5"
+                viewBox="0 0 20 20" fill="currentColor">
+                <path fill-rule="evenodd"
+                  d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2h-1V9z"
+                  clip-rule="evenodd" />
+              </svg>
+              <div>
+                <span class="font-medium">Note:</span> "Deleted Account" and "Unknown" each appear as a single user in
+                this visualization, but actually represent multiple different users combined into one stream.
+              </div>
+            </div>
+          </div>
+
           <div class="mt-8 text-sm text-gray-400 text-center max-w-3xl mx-auto">
             This visualization shows communication patterns for the top 100 most active members of the paramilitary
             groups from May 2021 to May 2023, covering the period of highest activity.
@@ -339,8 +362,14 @@
             <div class="relative aspect-[9/16] overflow-hidden video-container">
               <div class="absolute inset-0 bg-gradient-to-br from-blue-900 to-gray-900"></div>
               <!-- Placeholder for video - will be replaced with actual video later -->
-              <video class="w-full h-full object-cover demo-video" muted playsinline>
-                <source src="#" type="video/mp4">
+              <video class="w-full h-full object-cover demo-video" muted playsinline loading="lazy" fetchpriority="low"
+                poster="https://res.cloudinary.com/ejf/video/upload/q_auto,w_640,e_blur:300,f_jpg/v1/demos/exploring-feed.jpg">
+                <source
+                  src="https://res.cloudinary.com/ejf/video/upload/q_auto:good,f_webm,w_640/v1/demos/exploring-feed.webm"
+                  type="video/webm">
+                <source
+                  src="https://res.cloudinary.com/ejf/video/upload/q_auto:good,f_mp4,w_640/v1/demos/exploring-feed.mp4"
+                  type="video/mp4">
               </video>
               <div
                 class="absolute inset-0 bg-gradient-to-t from-gray-900 via-gray-900/40 to-transparent opacity-80 group-hover:opacity-40 transition-opacity duration-300 video-overlay">
@@ -368,8 +397,14 @@
             <div class="relative aspect-[9/16] overflow-hidden video-container">
               <div class="absolute inset-0 bg-gradient-to-br from-purple-900 to-gray-900"></div>
               <!-- Placeholder for video - will be replaced with actual video later -->
-              <video class="w-full h-full object-cover demo-video" muted playsinline>
-                <source src="#" type="video/mp4">
+              <video class="w-full h-full object-cover demo-video" muted playsinline loading="lazy" fetchpriority="low"
+                poster="https://res.cloudinary.com/ejf/video/upload/q_auto,w_640,e_blur:300,f_jpg/v1/demos/file-search.jpg">
+                <source
+                  src="https://res.cloudinary.com/ejf/video/upload/q_auto:good,f_webm,w_640/v1/demos/file-search.webm"
+                  type="video/webm">
+                <source
+                  src="https://res.cloudinary.com/ejf/video/upload/q_auto:good,f_mp4,w_640/v1/demos/file-search.mp4"
+                  type="video/mp4">
               </video>
               <div
                 class="absolute inset-0 bg-gradient-to-t from-gray-900 via-gray-900/40 to-transparent opacity-80 group-hover:opacity-40 transition-opacity duration-300 video-overlay">
@@ -397,8 +432,14 @@
             <div class="relative aspect-[9/16] overflow-hidden video-container">
               <div class="absolute inset-0 bg-gradient-to-br from-green-900 to-gray-900"></div>
               <!-- Placeholder for video - will be replaced with actual video later -->
-              <video class="w-full h-full object-cover demo-video" muted playsinline>
-                <source src="#" type="video/mp4">
+              <video class="w-full h-full object-cover demo-video" muted playsinline loading="lazy" fetchpriority="low"
+                poster="https://res.cloudinary.com/ejf/video/upload/q_auto,w_640,e_blur:300,f_jpg/v1/demos/sender-analysis.jpg">
+                <source
+                  src="https://res.cloudinary.com/ejf/video/upload/q_auto:good,f_webm,w_640/v1/demos/sender-analysis.webm"
+                  type="video/webm">
+                <source
+                  src="https://res.cloudinary.com/ejf/video/upload/q_auto:good,f_mp4,w_640/v1/demos/sender-analysis.mp4"
+                  type="video/mp4">
               </video>
               <div
                 class="absolute inset-0 bg-gradient-to-t from-gray-900 via-gray-900/40 to-transparent opacity-80 group-hover:opacity-40 transition-opacity duration-300 video-overlay">
@@ -427,8 +468,14 @@
             <div class="relative aspect-[9/16] overflow-hidden video-container">
               <div class="absolute inset-0 bg-gradient-to-br from-red-900 to-gray-900"></div>
               <!-- Placeholder for video - will be replaced with actual video later -->
-              <video class="w-full h-full object-cover demo-video" muted playsinline>
-                <source src="#" type="video/mp4">
+              <video class="w-full h-full object-cover demo-video" muted playsinline loading="lazy" fetchpriority="low"
+                poster="https://res.cloudinary.com/ejf/video/upload/q_auto,w_640,e_blur:300,f_jpg/v1/demos/network-graph.jpg">
+                <source
+                  src="https://res.cloudinary.com/ejf/video/upload/q_auto:good,f_webm,w_640/v1/demos/network-graph.webm"
+                  type="video/webm">
+                <source
+                  src="https://res.cloudinary.com/ejf/video/upload/q_auto:good,f_mp4,w_640/v1/demos/network-graph.mp4"
+                  type="video/mp4">
               </video>
               <div
                 class="absolute inset-0 bg-gradient-to-t from-gray-900 via-gray-900/40 to-transparent opacity-80 group-hover:opacity-40 transition-opacity duration-300 video-overlay">
@@ -459,6 +506,12 @@
               <!-- Placeholder for video - will be replaced with actual video later -->
               <video class="w-full h-full object-cover demo-video" muted playsinline>
                 <source src="#" type="video/mp4">
+                <source
+                  src="https://res.cloudinary.com/ejf/video/upload/q_auto:good,f_webm,w_640/v1/demos/advanced-search.webm"
+                  type="video/webm">
+                <source
+                  src="https://res.cloudinary.com/ejf/video/upload/q_auto:good,f_mp4,w_640/v1/demos/advanced-search.mp4"
+                  type="video/mp4">
               </video>
               <div
                 class="absolute inset-0 bg-gradient-to-t from-gray-900 via-gray-900/40 to-transparent opacity-80 group-hover:opacity-40 transition-opacity duration-300 video-overlay">
@@ -555,7 +608,7 @@ const loading = ref(true)
 const error = ref(null)
 const topSenders = ref([])
 const messagesBySender = ref([])
-const messageCount = ref(141157)
+const messageCount = ref(141157) // Default values that will be replaced when data loads
 const senderCount = ref(1108)
 const earliestDate = ref(new Date('2020-11-19'))
 const latestDate = ref(new Date('2024-12-27'))
@@ -580,6 +633,7 @@ const visualizationZoomLevel = ref(0) // Track zoom level for the scatterplot
 const scrollGraphProgress = ref(0) // Track scroll progress for the ScrollStreamGraph
 const demoSectionRef = ref(null) // Reference to the demo video section
 const demoVideos = ref([]) // References to the demo videos
+const statsInitialized = ref(true) // Flag to track if stats have been initialized
 
 // Component refs
 const heroSection = ref(null)
@@ -771,62 +825,71 @@ async function loadDataAndVisualization() {
     console.log('Loading parquet data...')
     loading.value = true
 
-    // Load data
-    const result = await loadParquetFile()
-    if (!result || !result.success) {
-      throw new Error('Failed to load data')
+    // Preload main video for faster animation once scrolling starts
+    if (typeof window !== 'undefined') {
+      const videoPreload = new Image();
+      videoPreload.src = "https://res.cloudinary.com/ejf/video/upload/q_auto,f_auto,w_1280/so_auto,e_blur:400/v1742858893/PARALEAKS_COMP_SHORTER_jm8fjw.jpg";
     }
 
-    // Store the raw data
-    console.log(`Successfully loaded ${result.data.length} rows of data.`)
-    rawData.value = result.data
-
-    // Shuffle data slightly to create more visual diversity
-    rawData.value = shuffleArray(result.data.slice(0, 10000))
-
-    // Set filtered data as backup
-    filteredData.value = rawData.value
-
-    // Process data for the StreamGraph component
-    messagesBySender.value = processDataForStreamgraph(result.data)
-
-    // Update stats
-    if (!messageCount.value) {
-      messageCount.value = result.data.length
-    }
-    if (!senderCount.value) {
-      const uniqueSenders = new Set(result.data.map(msg => getMessageSender(msg)))
-      senderCount.value = uniqueSenders.size
-    }
-
-    // Initialize color map
-    colorMap.initialize(result.data, getMessageSender)
-
-    // Initialize visualizations after data is loaded
-    nextTick(async () => {
-      // Initialize video section visualizations if component is ready
-      if (videoSection.value && videoSection.value.initializeVisualizations) {
-        await videoSection.value.initializeVisualizations(result.data)
+    // Defer data loading to prioritize UI rendering
+    setTimeout(async () => {
+      // Load data
+      const result = await loadParquetFile()
+      if (!result || !result.success) {
+        throw new Error('Failed to load data')
       }
 
-      loading.value = false
+      // Store the raw data
+      console.log(`Successfully loaded ${result.data.length} rows of data.`)
+      rawData.value = result.data
 
-      // Set up watcher for streaming status
-      watch(() => streamingStatus.active, (isActive) => {
-        visualizationStreaming.value = isActive
-        if (isActive) {
-          streamingProgress.processed = streamingStatus.processed
-          streamingProgress.total = streamingStatus.total
-          streamingProgress.startTime = streamingStatus.startTime
-          streamingProgress.message = streamingStatus.message
+      // Shuffle data slightly to create more visual diversity
+      rawData.value = shuffleArray(result.data.slice(0, 10000))
+
+      // Set filtered data as backup
+      filteredData.value = rawData.value
+
+      // Process data for the StreamGraph component
+      messagesBySender.value = processDataForStreamgraph(result.data)
+
+      // Update stats
+      if (!messageCount.value) {
+        messageCount.value = result.data.length
+      }
+      if (!senderCount.value) {
+        const uniqueSenders = new Set(result.data.map(msg => getMessageSender(msg)))
+        senderCount.value = uniqueSenders.size
+      }
+
+      // Initialize color map
+      colorMap.initialize(result.data, getMessageSender)
+
+      // Initialize visualizations after data is loaded
+      nextTick(async () => {
+        // Initialize video section visualizations if component is ready
+        if (videoSection.value && videoSection.value.initializeVisualizations) {
+          await videoSection.value.initializeVisualizations(result.data)
         }
-      }, { immediate: true })
 
-      // Set up watcher for progress updates
-      watch(() => streamingStatus.processed, (processed) => {
-        streamingProgress.processed = processed
+        loading.value = false
+
+        // Set up watcher for streaming status
+        watch(() => streamingStatus.active, (isActive) => {
+          visualizationStreaming.value = isActive
+          if (isActive) {
+            streamingProgress.processed = streamingStatus.processed
+            streamingProgress.total = streamingStatus.total
+            streamingProgress.startTime = streamingStatus.startTime
+            streamingProgress.message = streamingStatus.message
+          }
+        }, { immediate: true })
+
+        // Set up watcher for progress updates
+        watch(() => streamingStatus.processed, (processed) => {
+          streamingProgress.processed = processed
+        })
       })
-    })
+    }, 100) // Small delay to allow UI elements to render first
   } catch (err) {
     console.error('Error in data/visualization loading:', err)
     error.value = err.message
@@ -996,84 +1059,94 @@ function shuffleArray(array) {
 
 // Update scroll progress for animations
 function updateScrollProgress() {
-  // Update scrollY to trigger recomputation of scrollProgress
-  scrollY.value = window.scrollY;
-
-  // Calculate specific scroll progress for story section
-  if (storyContainer.value) {
-    const rect = storyContainer.value.getBoundingClientRect();
+  // Use requestAnimationFrame for smoother performance
+  scrollAnimationFrame = requestAnimationFrame(() => {
+    // Cache window.scrollY to avoid repeated access
+    const currentScrollY = window.scrollY;
     const windowHeight = window.innerHeight;
 
-    // Start when the section enters view, finish when it's at 40% through (much quicker)
-    const start = windowHeight;
-    const end = -windowHeight * 0.4;
+    // Update scrollY to trigger recomputation of scrollProgress
+    scrollY.value = currentScrollY;
 
-    // Calculate progress from 0 to 1
-    let progress = 0;
-    if (rect.top <= start) {
-      progress = Math.min(1, Math.max(0, (start - rect.top) / (start - end)));
+    // Calculate specific scroll progress for story section
+    if (storyContainer.value) {
+      const rect = storyContainer.value.getBoundingClientRect();
+
+      // Start when the section enters view, finish when it's at 40% through (much quicker)
+      const start = windowHeight;
+      const end = -windowHeight * 0.4;
+
+      // Calculate progress from 0 to 1
+      let progress = 0;
+      if (rect.top <= start) {
+        progress = Math.min(1, Math.max(0, (start - rect.top) / (start - end)));
+      }
+
+      // Only update when value changes significantly to avoid unnecessary rerenders
+      if (Math.abs(storyScrollProgress.value - progress) > 0.01) {
+        storyScrollProgress.value = progress;
+        // Update zoom level based on scroll progress
+        visualizationZoomLevel.value = computeZoomLevel(progress);
+      }
+
+      // Only show the scatterplot when we're actually in the story section
+      if (currentScrollY < windowHeight * 0.6) { // Adjusted threshold
+        // If we're still in the hero section viewport, force progress to 0
+        storyScrollProgress.value = 0;
+        visualizationZoomLevel.value = 0;
+      }
     }
 
-    storyScrollProgress.value = progress;
+    // Check if stats elements should animate
+    animateCounters();
 
-    // Update zoom level based on scroll progress
-    visualizationZoomLevel.value = computeZoomLevel(progress);
+    // Calculate scroll progress for the ScrollStreamGraph section - adjusted for taller section
+    if (scrollGraphSection.value) {
+      const rect = scrollGraphSection.value.getBoundingClientRect();
 
-    // Only show the scatterplot when we're actually in the story section
-    if (window.scrollY < window.innerHeight * 0.6) { // Adjusted threshold
-      // If we're still in the hero section viewport, force progress to 0
-      storyScrollProgress.value = 0;
-      visualizationZoomLevel.value = 0;
-    }
-  }
+      // Calculate the total scrollable height of the section
+      const sectionHeight = scrollGraphSection.value.offsetHeight;
 
-  // Check if stats elements should animate
-  animateCounters();
+      // Calculate how far the section has been scrolled through
+      let progress = 0;
 
-  // Calculate scroll progress for the ScrollStreamGraph section - adjusted for taller section
-  if (scrollGraphSection.value) {
-    const rect = scrollGraphSection.value.getBoundingClientRect();
-    const windowHeight = window.innerHeight;
+      // New condition: Only start showing streamgraph when video is complete or user has scrolled far enough
+      const videoComplete = !videoPlaying.value || videoProgress.value > 0.95;
+      const pastVideoSection = videoSection.value && videoSection.value.$el.getBoundingClientRect().bottom < 0;
 
-    // Calculate the total scrollable height of the section
-    const sectionHeight = scrollGraphSection.value.offsetHeight;
+      // Start when section enters view AND video conditions are met
+      if (rect.top < windowHeight && (videoComplete || pastVideoSection)) {
+        // How much of section has scrolled past the top of viewport
+        const scrolledPastTop = Math.max(0, -rect.top);
 
-    // Calculate how far the section has been scrolled through
-    let progress = 0;
+        // Calculate scrollable area (section height minus viewport height)
+        const scrollableArea = sectionHeight - windowHeight;
 
-    // Start when section enters view (bottom of viewport)
-    if (rect.top < windowHeight) {
-      // How much of section has scrolled past the top of viewport
-      const scrolledPastTop = Math.max(0, -rect.top);
+        // Calculate progress as a ratio of how much has been scrolled
+        // Use a power function to make the progress more gradual at the beginning
+        progress = Math.min(0.95, Math.pow(scrolledPastTop / scrollableArea, 0.8));
+      }
 
-      // Calculate scrollable area (section height minus viewport height)
-      const scrollableArea = sectionHeight - windowHeight;
+      // Make sure progress is 0 when section not yet in view
+      if (rect.top >= windowHeight) {
+        progress = 0;
+      }
 
-      // Calculate progress as a ratio of how much has been scrolled
-      // Use a power function to make the progress more gradual at the beginning
-      progress = Math.min(0.95, Math.pow(scrolledPastTop / scrollableArea, 0.8));
-
-      // For debugging (uncomment if needed)
-      // console.log(`ScrollGraph progress: ${progress.toFixed(2)}, top: ${rect.top}, scrolled: ${scrolledPastTop}/${scrollableArea}`);
+      // Only update when value changes significantly
+      if (Math.abs(scrollGraphProgress.value - progress) > 0.01) {
+        scrollGraphProgress.value = progress;
+      }
     }
 
-    // Make sure progress is 0 when section not yet in view
-    if (rect.top >= windowHeight) {
-      progress = 0;
-    }
-
-    // Update the scrollGraphProgress value
-    scrollGraphProgress.value = progress;
-  }
-
-  // Use requestAnimationFrame to update on next frame
-  scrollAnimationFrame = requestAnimationFrame(updateScrollProgress);
+    // Continue animation loop
+    updateScrollProgress();
+  });
 }
 
 // Add scrollAnimationFrame variable for cleanup
 let scrollAnimationFrame = null;
 
-// Update onMounted hook for better sequencing
+// Update onMounted hook
 onMounted(() => {
   // Create cleanup function
   const cleanup = () => {
@@ -1093,35 +1166,46 @@ onMounted(() => {
     cleanup()
   })
 
-  // Handle event setup
-  nextTick(() => {
-    // Add direct scroll event listener with our ultra simple handler
-    window.addEventListener('scroll', updateSimpleProgress, { passive: true })
-    window.addEventListener('resize', updateSimpleProgress, { passive: true })
+  // Handle event setup - prioritize critical rendering path
+  // First add basic event listeners for immediate UI responsiveness
+  window.addEventListener('scroll', updateSimpleProgress, { passive: true })
+  window.addEventListener('resize', updateSimpleProgress, { passive: true })
 
-    // Call once immediately to initialize
-    updateSimpleProgress()
+  // Call once immediately to initialize
+  updateSimpleProgress()
 
+  // Use requestIdleCallback or setTimeout to defer non-critical operations
+  const startDeferredOperations = () => {
     // Start the scroll animation frame for streamgraph and other animated sections
     scrollAnimationFrame = requestAnimationFrame(updateScrollProgress)
 
     // Continue with other initialization...
     loadDataAndVisualization()
       .then(() => {
-        setupSectionObservers([
-          { name: 'section1', ref: heroSection },
-          { name: 'section2', ref: videoSection },
-          { name: 'section3', ref: statsSection },
-          { name: 'section4', ref: storySection, threshold: 0.15 },
-          { name: 'section5', ref: scrollGraphSection, threshold: 0.2 },
-          { name: 'section4Footer', ref: storySection, threshold: 0.7 },
-          { name: 'section6', ref: demoSectionRef, threshold: 0.2 }
-        ])
+        // Defer section observers until after initial render
+        setTimeout(() => {
+          setupSectionObservers([
+            { name: 'section1', ref: heroSection },
+            { name: 'section2', ref: videoSection },
+            { name: 'section3', ref: statsSection },
+            { name: 'section4', ref: storySection, threshold: 0.15 },
+            { name: 'section5', ref: scrollGraphSection, threshold: 0.2 },
+            { name: 'section4Footer', ref: storySection, threshold: 0.7 },
+            { name: 'section6', ref: demoSectionRef, threshold: 0.2 }
+          ])
 
-        initializeDemoVideos()
-        setupCounterObservers()
+          initializeDemoVideos()
+          setupCounterObservers()
+        }, 100)
       })
-  })
+  }
+
+  // Use requestIdleCallback if available, otherwise setTimeout
+  if (typeof window !== 'undefined' && 'requestIdleCallback' in window) {
+    window.requestIdleCallback(startDeferredOperations, { timeout: 1000 })
+  } else {
+    setTimeout(startDeferredOperations, 200)
+  }
 })
 
 // Set up counter animation observers
@@ -1168,9 +1252,18 @@ function setupCounterObservers() {
 // Animate a specific counter element
 function startCounterAnimation(element) {
   const targetValue = parseInt(element.getAttribute('data-counter-value'), 10);
-  const duration = 2000; // Animation duration in ms
+  const duration = 1500; // Animation duration in ms
   const startTime = performance.now();
   const startValue = 0;
+
+  // Make sure we have a valid target value
+  if (isNaN(targetValue) || targetValue === 0) {
+    // If no valid target value, just use the original text content
+    const originalText = element.getAttribute('data-original-text') || element.textContent;
+    element.textContent = originalText;
+    element.classList.add('completed');
+    return;
+  }
 
   // Add animation class
   element.classList.add('animating');
@@ -1222,8 +1315,11 @@ function convertToCounters() {
       const currentText = el.textContent.trim();
       const numericValue = parseInt(currentText.replace(/,/g, ''), 10);
 
-      // Only proceed if we have a valid number
-      if (!isNaN(numericValue)) {
+      // Store the original text regardless of numeric validity
+      el.setAttribute('data-original-text', currentText);
+
+      // Only proceed with animation if we have a valid number
+      if (!isNaN(numericValue) && numericValue > 0) {
         // Store original value as attribute
         el.setAttribute('data-counter-value', numericValue);
         // Reset displayed value to 0
@@ -1437,56 +1533,17 @@ function updateSimpleProgress() {
   }
 }
 
-// Update onMounted hook
-onMounted(() => {
-  // Create cleanup function
-  const cleanup = () => {
-    // Clean up event listeners
-    window.removeEventListener('scroll', updateSimpleProgress)
-    window.removeEventListener('resize', updateSimpleProgress)
+// Sender highlight handler
+function handleSenderHighlight(senderName) {
+  // You can add any additional logic here when a sender is highlighted
+  console.log('Sender highlighted:', senderName);
+}
 
-    // Cancel any other animation frames
-    if (scrollAnimationFrame) {
-      cancelAnimationFrame(scrollAnimationFrame)
-    }
-    cancelStreamingPoints()
-  }
-
-  // Register cleanup
-  onBeforeUnmount(() => {
-    cleanup()
-  })
-
-  // Handle event setup
-  nextTick(() => {
-    // Add direct scroll event listener with our ultra simple handler
-    window.addEventListener('scroll', updateSimpleProgress, { passive: true })
-    window.addEventListener('resize', updateSimpleProgress, { passive: true })
-
-    // Call once immediately to initialize
-    updateSimpleProgress()
-
-    // Start the scroll animation frame for streamgraph and other animated sections
-    scrollAnimationFrame = requestAnimationFrame(updateScrollProgress)
-
-    // Continue with other initialization...
-    loadDataAndVisualization()
-      .then(() => {
-        setupSectionObservers([
-          { name: 'section1', ref: heroSection },
-          { name: 'section2', ref: videoSection },
-          { name: 'section3', ref: statsSection },
-          { name: 'section4', ref: storySection, threshold: 0.15 },
-          { name: 'section5', ref: scrollGraphSection, threshold: 0.2 },
-          { name: 'section4Footer', ref: storySection, threshold: 0.7 },
-          { name: 'section6', ref: demoSectionRef, threshold: 0.2 }
-        ])
-
-        initializeDemoVideos()
-        setupCounterObservers()
-      })
-  })
-})
+// Clear highlight handler
+function handleClearHighlight() {
+  // You can add any additional logic here when highlight is cleared
+  console.log('Highlight cleared');
+}
 </script>
 
 <style>
@@ -1572,6 +1629,9 @@ html {
 .fixed.top-0 .bg-blue-500 {
   background: linear-gradient(90deg, #3B82F6, #60A5FA);
   box-shadow: 0 0 8px rgba(59, 130, 246, 0.5);
+  will-change: width;
+  transform: translateZ(0);
+  backface-visibility: hidden;
 }
 
 /* Text shadow for better readability on video */
@@ -1605,6 +1665,15 @@ html {
   animation: pulse 2s infinite;
 }
 
+/* Use hardware acceleration for heavy animations */
+.narrative-video-container,
+.scrollgraph-container,
+.narrative-streamgraph {
+  will-change: transform, opacity;
+  transform: translateZ(0);
+  backface-visibility: hidden;
+}
+
 /* Improved transitions for scroll animations */
 .transform {
   transition: transform 0.7s cubic-bezier(0.22, 1, 0.36, 1),
@@ -1616,6 +1685,7 @@ html {
   opacity: 0;
   transform: translateY(40px);
   transition: opacity 0.9s ease, transform 0.9s cubic-bezier(0.13, 0.8, 0.4, 1);
+  will-change: transform, opacity;
 }
 
 .fade-up.visible {
@@ -1627,6 +1697,7 @@ html {
   opacity: 0;
   transform: translateX(40px);
   transition: opacity 0.9s ease, transform 0.9s cubic-bezier(0.13, 0.8, 0.4, 1);
+  will-change: transform, opacity;
 }
 
 .fade-left.visible {
@@ -1638,6 +1709,7 @@ html {
   opacity: 0;
   transform: translateX(-40px);
   transition: opacity 0.9s ease, transform 0.9s cubic-bezier(0.13, 0.8, 0.4, 1);
+  will-change: transform, opacity;
 }
 
 .fade-right.visible {
@@ -1694,6 +1766,7 @@ html {
   opacity: 0;
   transform: scale(0.85);
   transition: opacity 0.9s ease, transform 0.9s cubic-bezier(0.13, 0.8, 0.4, 1);
+  will-change: transform, opacity;
 }
 
 .scale-up.visible {
@@ -1709,6 +1782,7 @@ html {
 
 .stagger-item.visible {
   animation: staggerFadeIn 0.9s forwards;
+  will-change: transform, opacity;
 }
 
 @keyframes staggerFadeIn {
@@ -1729,6 +1803,7 @@ html {
   opacity: 0;
   transition: transform 1.4s cubic-bezier(0.19, 1, 0.22, 1),
     opacity 0.6s ease 0.3s;
+  will-change: transform, opacity;
 }
 
 .build-in-left.visible {
@@ -1741,6 +1816,7 @@ html {
   opacity: 0;
   transition: transform 1.4s cubic-bezier(0.19, 1, 0.22, 1),
     opacity 0.6s ease 0.3s;
+  will-change: transform, opacity;
 }
 
 .build-in-right.visible {
@@ -1764,6 +1840,7 @@ html {
   background: #1f2937;
   transform: translateX(0);
   transition: transform 1.4s cubic-bezier(0.77, 0, 0.18, 1);
+  will-change: transform;
 }
 
 .reveal-text.visible::after {
@@ -1787,52 +1864,23 @@ html {
   stroke-dasharray: 1000;
   stroke-dashoffset: 1000;
   transition: stroke-dashoffset 2.5s ease-in-out;
+  will-change: stroke-dashoffset;
 }
 
 .draw-path.visible {
   stroke-dashoffset: 0;
 }
 
-/* Sequence animation delay utility classes */
-.delay-100 {
-  transition-delay: 100ms;
+/* Optimize video card hover effects */
+.demo-video-card {
+  transform: translate3d(0, 0, 0);
+  backface-visibility: hidden;
+  will-change: transform, box-shadow;
 }
 
-.delay-200 {
-  transition-delay: 200ms;
+/* Video container hardware acceleration */
+.video-container {
+  will-change: opacity;
+  transform: translateZ(0);
 }
-
-.delay-300 {
-  transition-delay: 300ms;
-}
-
-.delay-400 {
-  transition-delay: 400ms;
-}
-
-.delay-500 {
-  transition-delay: 500ms;
-}
-
-.delay-600 {
-  transition-delay: 600ms;
-}
-
-.delay-700 {
-  transition-delay: 700ms;
-}
-
-.delay-800 {
-  transition-delay: 800ms;
-}
-
-.delay-900 {
-  transition-delay: 900ms;
-}
-
-.delay-1000 {
-  transition-delay: 1000ms;
-}
-
-/* Magazine-style layout enhancements */
 </style>

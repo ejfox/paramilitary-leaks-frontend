@@ -111,6 +111,11 @@ const props = defineProps({
   highlightedSender: {
     type: String,
     default: null
+  },
+  defaultLayout: {
+    type: String,
+    default: 'wiggle',
+    validator: (value) => ['wiggle', 'stack', 'fill'].includes(value)
   }
 })
 
@@ -119,7 +124,7 @@ const emit = defineEmits(['highlight-sender', 'clear-highlight'])
 const streamContainer = ref(null)
 const brushContainer = ref(null)
 const { width, height } = useElementSize(streamContainer)
-const streamLayout = ref('wiggle') // 'wiggle' for streamgraph, 'stack' for stacked, 'fill' for normalized
+const streamLayout = ref(props.defaultLayout) // Use the provided default layout
 const streamChart = shallowRef(null)
 const colorMap = useColorMap()
 const streamGraphHighlightedSender = ref(null)
