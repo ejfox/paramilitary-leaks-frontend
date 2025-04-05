@@ -1,8 +1,8 @@
 <template>
   <div class="min-h-screen bg-gray-950 text-white overflow-hidden">
-    <!-- Scroll progress indicator -->
-    <div class="fixed top-0 left-0 w-full h-1.5 z-50">
-      <div class="bg-blue-500 h-full transition-all duration-150 ease-out" :style="`width: ${scrollProgress}%`"></div>
+    <!-- Scroll progress indicator - ultra simplified -->
+    <div class="fixed top-0 left-0 w-full h-1.5 z-[100] bg-gray-800/40">
+      <div class="bg-blue-500 h-full" :style="{ width: `${simpleScrollProgress}%` }"></div>
     </div>
 
     <!-- Fixed navigation -->
@@ -661,7 +661,7 @@ const computeZoomLevel = (progress) => {
   return 0.5 + (normalizedProgress * 0.5);
 };
 
-// Calculate overall scroll progress as percentage
+// Calculate overall scroll progress as percentage - simplified version
 const scrollProgress = computed(() => {
   if (typeof window === 'undefined') return 0;
 
@@ -670,12 +670,18 @@ const scrollProgress = computed(() => {
   const windowHeight = window.innerHeight;
   const scrollableHeight = documentHeight - windowHeight;
 
-  // Calculate percentage scrolled
-  const percentage = (scrollPosition / scrollableHeight) * 100;
+  // Prevent division by zero
+  if (scrollableHeight <= 0) return 0;
 
-  // Return clamped value between 0 and 100
-  return Math.min(100, Math.max(0, percentage));
+  // Calculate percentage scrolled
+  return Math.min(100, Math.max(0, Math.round((scrollPosition / scrollableHeight) * 100)));
 });
+
+// Simplified scroll handler
+function handleScroll() {
+  // Just update scrollY to trigger recomputation of scrollProgress
+  scrollY.value = window.scrollY;
+}
 
 // Handle section change from nav component
 function handleSectionChange(sectionRef) {
@@ -990,6 +996,9 @@ function shuffleArray(array) {
 
 // Update scroll progress for animations
 function updateScrollProgress() {
+  // Update scrollY to trigger recomputation of scrollProgress
+  scrollY.value = window.scrollY;
+
   // Calculate specific scroll progress for story section
   if (storyContainer.value) {
     const rect = storyContainer.value.getBoundingClientRect();
@@ -1026,95 +1035,92 @@ function updateScrollProgress() {
     const rect = scrollGraphSection.value.getBoundingClientRect();
     const windowHeight = window.innerHeight;
 
-    // Calculate the total scrollable height of the section (now 8x viewport height)
+    // Calculate the total scrollable height of the section
     const sectionHeight = scrollGraphSection.value.offsetHeight;
 
-    // We want to start when the section is just coming into view from the bottom
-    // and complete when it's scrolled almost completely off the top
-    const sectionTopPos = rect.top;
-    const sectionBottomPos = rect.bottom;
-
-    // Calculate how far the section has been scrolled through with a more gradual curve
+    // Calculate how far the section has been scrolled through
     let progress = 0;
 
     // Start when section enters view (bottom of viewport)
-    if (sectionTopPos < windowHeight) {
-      // Calculate how far we've scrolled through the section
-      // Use a more gradual approach that doesn't reach 1.0 until very end
-
+    if (rect.top < windowHeight) {
       // How much of section has scrolled past the top of viewport
-      const scrolledPastTop = Math.max(0, -sectionTopPos);
+      const scrolledPastTop = Math.max(0, -rect.top);
 
-      // Calculate scrollable area (section height minus 2.5 viewport heights to give more margin)
-      const scrollableArea = Math.max(sectionHeight - windowHeight * 2.5, windowHeight * 3.5);
+      // Calculate scrollable area (section height minus viewport height)
+      const scrollableArea = sectionHeight - windowHeight;
 
-      // Calculate progress with more gradual curve
-      // This ensures we don't reach progress=1 until almost the entire section is off screen
-      progress = Math.min(0.95, Math.pow(scrolledPastTop / scrollableArea, 0.75));
+      // Calculate progress as a ratio of how much has been scrolled
+      // Use a power function to make the progress more gradual at the beginning
+      progress = Math.min(0.95, Math.pow(scrolledPastTop / scrollableArea, 0.8));
 
-      // Less verbose debugging in production
-      if (process.env.NODE_ENV !== 'production' && Math.random() < 0.01) {
-        console.log(`ScrollGraph progress: ${progress.toFixed(2)}, top: ${sectionTopPos}, scrolled: ${scrolledPastTop}/${scrollableArea}`);
-      }
+      // For debugging (uncomment if needed)
+      // console.log(`ScrollGraph progress: ${progress.toFixed(2)}, top: ${rect.top}, scrolled: ${scrolledPastTop}/${scrollableArea}`);
     }
 
     // Make sure progress is 0 when section not yet in view
-    if (sectionTopPos >= windowHeight) {
+    if (rect.top >= windowHeight) {
       progress = 0;
     }
 
     // Update the scrollGraphProgress value
     scrollGraphProgress.value = progress;
   }
+
+  // Use requestAnimationFrame to update on next frame
+  scrollAnimationFrame = requestAnimationFrame(updateScrollProgress);
 }
+
+// Add scrollAnimationFrame variable for cleanup
+let scrollAnimationFrame = null;
 
 // Update onMounted hook for better sequencing
 onMounted(() => {
   // Create cleanup function
   const cleanup = () => {
     // Clean up event listeners
-    window.removeEventListener('scroll', scrollHandler.value)
-    window.removeEventListener('resize', handleResize)
+    window.removeEventListener('scroll', updateSimpleProgress)
+    window.removeEventListener('resize', updateSimpleProgress)
 
-    // Cancel any animation frames
+    // Cancel any other animation frames
+    if (scrollAnimationFrame) {
+      cancelAnimationFrame(scrollAnimationFrame)
+    }
     cancelStreamingPoints()
   }
 
-  // Register cleanup first, before any async operations
+  // Register cleanup
   onBeforeUnmount(() => {
     cleanup()
   })
 
-  // Handle event setup and initialization
-  nextTick(async () => {
-    // Load data and then initialize visualizations
-    await loadDataAndVisualization()
+  // Handle event setup
+  nextTick(() => {
+    // Add direct scroll event listener with our ultra simple handler
+    window.addEventListener('scroll', updateSimpleProgress, { passive: true })
+    window.addEventListener('resize', updateSimpleProgress, { passive: true })
 
-    // Set up scroll handler
-    scrollHandler.value = () => {
-      updateScrollProgress()
-    }
+    // Call once immediately to initialize
+    updateSimpleProgress()
 
-    // Add event listeners
-    window.addEventListener('scroll', scrollHandler.value, { passive: true })
-    window.addEventListener('resize', handleResize, { passive: true })
+    // Start the scroll animation frame for streamgraph and other animated sections
+    scrollAnimationFrame = requestAnimationFrame(updateScrollProgress)
 
-    // Set up section observers for navigation
-    setupSectionObservers([
-      { name: 'section1', ref: heroSection },
-      { name: 'section2', ref: videoSection },
-      { name: 'section3', ref: statsSection },
-      { name: 'section4', ref: storySection, threshold: 0.15 },
-      { name: 'section5', ref: scrollGraphSection, threshold: 0.2 },
-      { name: 'section4Footer', ref: storySection, threshold: 0.7 },
-      { name: 'section6', ref: demoSectionRef, threshold: 0.2 }
-    ])
+    // Continue with other initialization...
+    loadDataAndVisualization()
+      .then(() => {
+        setupSectionObservers([
+          { name: 'section1', ref: heroSection },
+          { name: 'section2', ref: videoSection },
+          { name: 'section3', ref: statsSection },
+          { name: 'section4', ref: storySection, threshold: 0.15 },
+          { name: 'section5', ref: scrollGraphSection, threshold: 0.2 },
+          { name: 'section4Footer', ref: storySection, threshold: 0.7 },
+          { name: 'section6', ref: demoSectionRef, threshold: 0.2 }
+        ])
 
-    // Initialize demo video functionality
-    initializeDemoVideos()
-
-    // Create intersection observer for number counters
-    setupCounterObservers()
+        initializeDemoVideos()
+        setupCounterObservers()
+      })
   })
 })
 
@@ -1411,6 +1417,76 @@ function handleDemoCardClick(index) {
       }, 3000);
     });
 }
+
+// New independent variable for scroll progress
+const simpleScrollProgress = ref(0)
+
+// Ultra simple scroll handler
+function updateSimpleProgress() {
+  if (typeof window === 'undefined') return
+
+  const scrollPosition = window.scrollY
+  const documentHeight = document.documentElement.scrollHeight
+  const windowHeight = window.innerHeight
+  const scrollableHeight = documentHeight - windowHeight
+
+  if (scrollableHeight <= 0) {
+    simpleScrollProgress.value = 0
+  } else {
+    simpleScrollProgress.value = Math.min(100, Math.max(0, Math.round((scrollPosition / scrollableHeight) * 100)))
+  }
+}
+
+// Update onMounted hook
+onMounted(() => {
+  // Create cleanup function
+  const cleanup = () => {
+    // Clean up event listeners
+    window.removeEventListener('scroll', updateSimpleProgress)
+    window.removeEventListener('resize', updateSimpleProgress)
+
+    // Cancel any other animation frames
+    if (scrollAnimationFrame) {
+      cancelAnimationFrame(scrollAnimationFrame)
+    }
+    cancelStreamingPoints()
+  }
+
+  // Register cleanup
+  onBeforeUnmount(() => {
+    cleanup()
+  })
+
+  // Handle event setup
+  nextTick(() => {
+    // Add direct scroll event listener with our ultra simple handler
+    window.addEventListener('scroll', updateSimpleProgress, { passive: true })
+    window.addEventListener('resize', updateSimpleProgress, { passive: true })
+
+    // Call once immediately to initialize
+    updateSimpleProgress()
+
+    // Start the scroll animation frame for streamgraph and other animated sections
+    scrollAnimationFrame = requestAnimationFrame(updateScrollProgress)
+
+    // Continue with other initialization...
+    loadDataAndVisualization()
+      .then(() => {
+        setupSectionObservers([
+          { name: 'section1', ref: heroSection },
+          { name: 'section2', ref: videoSection },
+          { name: 'section3', ref: statsSection },
+          { name: 'section4', ref: storySection, threshold: 0.15 },
+          { name: 'section5', ref: scrollGraphSection, threshold: 0.2 },
+          { name: 'section4Footer', ref: storySection, threshold: 0.7 },
+          { name: 'section6', ref: demoSectionRef, threshold: 0.2 }
+        ])
+
+        initializeDemoVideos()
+        setupCounterObservers()
+      })
+  })
+})
 </script>
 
 <style>
@@ -1490,6 +1566,12 @@ html {
   100% {
     background-color: rgba(31, 41, 55, 0.5);
   }
+}
+
+/* Progress indicator styles */
+.fixed.top-0 .bg-blue-500 {
+  background: linear-gradient(90deg, #3B82F6, #60A5FA);
+  box-shadow: 0 0 8px rgba(59, 130, 246, 0.5);
 }
 
 /* Text shadow for better readability on video */
