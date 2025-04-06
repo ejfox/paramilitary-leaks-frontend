@@ -284,7 +284,7 @@
           <div class="bg-gray-800 rounded-xl overflow-hidden shadow-xl mb-8">
             <div class="p-4">
               <h3 class="text-2xl font-bold text-white mb-4">Exploring the Feed</h3>
-              <video class="w-full rounded" controls>
+              <video class="w-full rounded" controls poster="https://res.cloudinary.com/ejf/video/upload/v1743947176/001_llc5ag.png">
                 <source src="https://res.cloudinary.com/ejf/video/upload/v1743947176/001_llc5ag.mp4" type="video/mp4">
                 Your browser does not support the video tag.
               </video>
@@ -295,7 +295,7 @@
           <div class="bg-gray-800 rounded-xl overflow-hidden shadow-xl mb-8">
             <div class="p-4">
               <h3 class="text-2xl font-bold text-white mb-4">File Search & Visualization</h3>
-              <video class="w-full rounded" controls>
+              <video class="w-full rounded" controls poster="https://res.cloudinary.com/ejf/video/upload/v1743947179/002_z7nmhi.png">
                 <source src="https://res.cloudinary.com/ejf/video/upload/v1743947179/002_z7nmhi.mp4" type="video/mp4">
                 Your browser does not support the video tag.
               </video>
@@ -306,7 +306,7 @@
           <div class="bg-gray-800 rounded-xl overflow-hidden shadow-xl mb-8">
             <div class="p-4">
               <h3 class="text-2xl font-bold text-white mb-4">Sender Analysis</h3>
-              <video class="w-full rounded" controls>
+              <video class="w-full rounded" controls poster="https://res.cloudinary.com/ejf/video/upload/v1743947182/003_wde5pe.png">
                 <source src="https://res.cloudinary.com/ejf/video/upload/v1743947182/003_wde5pe.mp4" type="video/mp4">
                 Your browser does not support the video tag.
               </video>
@@ -1466,5 +1466,15 @@ html {
   transform: translateZ(0);
 }
 
-/* Removed complex loading animations */
+/* Video styling */
+.bg-gray-800.rounded-xl video {
+  border-radius: 0.5rem;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+}
+
+.bg-gray-800.rounded-xl video:hover {
+  transform: scale(1.01);
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+}
 </style>
