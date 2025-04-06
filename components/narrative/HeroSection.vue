@@ -13,22 +13,6 @@
         <div class="absolute inset-0 bg-gradient-to-b from-black/70 via-black/50 to-gray-900/90"
           :style="{ transform: `translateY(${scrollY * 0.1}px)` }"></div>
 
-        <!-- Floating particles layer - for subtle depth -->
-        <div class="absolute inset-0 opacity-40" :style="{ transform: `translateY(${scrollY * -0.15}px)` }">
-          <div v-for="i in 10" :key="i" class="absolute w-1 h-1 rounded-full bg-blue-400/20" :style="{
-            left: `${Math.random() * 100}%`,
-            top: `${Math.random() * 100}%`,
-            animation: `float ${3 + Math.random() * 5}s infinite ease-in-out`
-          }"></div>
-          <div v-for="i in 8" :key="`dot-${i}`" class="absolute w-2 h-2 rounded-full bg-white/10" :style="{
-            left: `${Math.random() * 100}%`,
-            top: `${Math.random() * 100}%`,
-            animation: `pulse ${2 + Math.random() * 4}s infinite ease-in-out ${Math.random() * 2}s`
-          }"></div>
-        </div>
-
-        <!-- Subtle vignette effect - static -->
-        <div class="absolute inset-0 bg-radial-vignette"></div>
       </div>
     </div>
 

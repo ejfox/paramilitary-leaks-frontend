@@ -293,21 +293,21 @@ function renderStreamGraph() {
     // Define key events to annotate - only show if they're within visible data
     const annotations = [
       {
-        date: new Date('2021-07-15'), // Summer 2021
-        label: 'Summer 2021 Spike',
-        description: 'Increased militia activity around Independence Day events and border operations',
+        date: new Date('2021-09-15'), // Summer 2021
+        label: 'Fall 2021 Spike',
+        description: 'tk',
         yOffset: -80
       },
       {
-        date: new Date('2022-01-15'), // Winter 2022
+        date: new Date('2022-02-15'), // Winter 2022
         label: 'Winter 2022 Surge',
-        description: 'Communication intensified during COVID mandate protests and convoy planning',
+        description: '',
         yOffset: -60
       },
       {
-        date: new Date('2022-09-15'), // Fall 2022 instead of 2023
-        label: 'Fall 2022 Activity',
-        description: 'Coordination around midterm elections and regional training exercises',
+        date: new Date('2023-01-01'), // Fall 2022 instead of 2023
+        label: 'January 2023',
+        description: '',
         yOffset: -100
       }
     ]

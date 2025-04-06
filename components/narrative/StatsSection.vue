@@ -3,15 +3,12 @@
     <div class="container mx-auto px-6 max-w-4xl">
       <!-- Title slot -->
       <slot name="title">
-        <h2 class="text-3xl sm:text-4xl font-bold mb-12 text-white text-center">The Paramilitary Archive</h2>
       </slot>
 
       <!-- Introduction slot -->
       <slot name="introduction">
-        <div class="prose prose-lg prose-invert mx-auto mb-16 px-4">
-          <p class="text-center text-xl">
-            The leaked database includes messages from paramilitary groups and militias spanning multiple years.
-          </p>
+        <div class="prose prose-lg prose-invert mx-auto my-16 px-4">
+
         </div>
       </slot>
 
