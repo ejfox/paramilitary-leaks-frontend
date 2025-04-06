@@ -1155,6 +1155,15 @@ function initializeDemoVideos() {
     // Store references to video elements
     demoVideos.value = Array.from(videoElements);
 
+    // Force load videos
+    demoVideos.value.forEach((video, index) => {
+      // Ensure video is properly loaded
+      if (video.readyState === 0) {
+        console.log(`Loading video ${index + 1}...`);
+        video.load();
+      }
+    });
+
     // Add click listeners to all video cards
     const videoCards = document.querySelectorAll('.demo-video-card');
     videoCards.forEach((card, index) => {
@@ -1166,6 +1175,15 @@ function initializeDemoVideos() {
 
     // Track video progress on timeupdate events
     demoVideos.value.forEach((video, index) => {
+      // Add error handling for videos
+      video.addEventListener('error', (e) => {
+        console.error(`Error loading video ${index + 1}:`, e);
+        // Try to reload the video
+        setTimeout(() => {
+          video.load();
+        }, 1000);
+      });
+
       video.addEventListener('timeupdate', () => {
         if (videoContainers[index]) {
           // Set the progress as a CSS variable
@@ -1210,55 +1228,90 @@ function handleDemoCardClick(index) {
   const videoContainer = videoContainers[index];
   const playButton = videoContainer.querySelector('.video-play-button');
 
-  // If video is already playing with sound, pause it
-  if (!video.paused && !video.muted) {
-    video.pause();
-    video.muted = true;
-    video.autoplay = true;
-    video.play(); // Resume playing muted
-    videoContainer.classList.remove('playing');
-    playButton.classList.remove('hidden');
+  // Ensure video is loaded
+  if (video.readyState === 0) {
+    console.log(`Loading video ${index + 1} before playing...`);
+    video.load();
+    // Show loading state
+    videoContainer.classList.add('loading');
+    
+    // Set a timeout to check if video loaded
+    setTimeout(() => {
+      if (video.readyState === 0) {
+        console.log(`Video ${index + 1} still loading, trying to reload...`);
+        // Try reloading with the source directly
+        const source = video.querySelector('source');
+        if (source) {
+          const videoUrl = source.src;
+          video.innerHTML = `<source src="${videoUrl}" type="video/mp4">`;
+          video.load();
+        }
+      }
+      videoContainer.classList.remove('loading');
+    }, 2000);
+    
+    // Wait for video to be ready
+    video.addEventListener('canplay', () => {
+      videoContainer.classList.remove('loading');
+      continuePlayingVideo();
+    }, { once: true });
+    
     return;
   }
 
-  // Pause any other unmuted videos
-  demoVideos.value.forEach((v, i) => {
-    if (i !== index && !v.paused && !v.muted) {
-      v.pause();
-      v.muted = true;
-      v.autoplay = true;
-      v.play(); // Resume playing muted
-      if (videoContainers[i]) {
-        videoContainers[i].classList.remove('playing');
-        const btn = videoContainers[i].querySelector('.video-play-button');
-        if (btn) btn.classList.remove('hidden');
-      }
-    }
-  });
-
-  // Play the selected video with sound
-  videoContainer.classList.add('playing');
-  playButton.classList.add('hidden');
-  video.muted = false;
-  video.currentTime = 0; // Start from beginning
-
-  video.play()
-    .then(() => {
-      // Try to go fullscreen on mobile
-      if (window.innerWidth <= 768 && videoContainer.requestFullscreen) {
-        videoContainer.requestFullscreen().catch(err => {
-          console.log('Could not enter fullscreen mode:', err);
-        });
-      }
-    })
-    .catch(err => {
-      console.error('Error playing video:', err);
-      // Show error message
+  continuePlayingVideo();
+  
+  function continuePlayingVideo() {
+    // If video is already playing with sound, pause it
+    if (!video.paused && !video.muted) {
+      video.pause();
+      video.muted = true;
+      video.autoplay = true;
+      video.play(); // Resume playing muted
       videoContainer.classList.remove('playing');
       playButton.classList.remove('hidden');
-      video.muted = true;
-      video.play(); // Fallback to muted autoplay
+      return;
+    }
+
+    // Pause any other unmuted videos
+    demoVideos.value.forEach((v, i) => {
+      if (i !== index && !v.paused && !v.muted) {
+        v.pause();
+        v.muted = true;
+        v.autoplay = true;
+        v.play(); // Resume playing muted
+        if (videoContainers[i]) {
+          videoContainers[i].classList.remove('playing');
+          const btn = videoContainers[i].querySelector('.video-play-button');
+          if (btn) btn.classList.remove('hidden');
+        }
+      }
     });
+
+    // Play the selected video with sound
+    videoContainer.classList.add('playing');
+    playButton.classList.add('hidden');
+    video.muted = false;
+    video.currentTime = 0; // Start from beginning
+
+    video.play()
+      .then(() => {
+        // Try to go fullscreen on mobile
+        if (window.innerWidth <= 768 && videoContainer.requestFullscreen) {
+          videoContainer.requestFullscreen().catch(err => {
+            console.log('Could not enter fullscreen mode:', err);
+          });
+        }
+      })
+      .catch(err => {
+        console.error('Error playing video:', err);
+        // Show error message
+        videoContainer.classList.remove('playing');
+        playButton.classList.remove('hidden');
+        video.muted = true;
+        video.play(); // Fallback to muted autoplay
+      });
+  }
 }
 
 // New independent variable for scroll progress
@@ -1629,5 +1682,36 @@ html {
 .video-container {
   will-change: opacity;
   transform: translateZ(0);
+}
+
+/* Loading state for videos */
+.video-container.loading::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 10;
+}
+
+.video-container.loading::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 40px;
+  height: 40px;
+  margin: -20px 0 0 -20px;
+  border: 4px solid rgba(255, 255, 255, 0.3);
+  border-radius: 50%;
+  border-top-color: #fff;
+  animation: spin 1s ease-in-out infinite;
+  z-index: 11;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
 }
 </style>
