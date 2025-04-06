@@ -6,13 +6,8 @@
         @error="handleVideoError" crossorigin="anonymous"
         poster="https://res.cloudinary.com/ejf/video/upload/q_auto,f_auto,w_1280/so_auto,e_blur:400/v1742858893/PARALEAKS_COMP_SHORTER_jm8fjw.jpg">
         <source
-          :src="'https://res.cloudinary.com/ejf/video/upload/q_auto:good,f_webm,w_1280,c_fill,g_center,vc_auto,br_2m/v1742858893/PARALEAKS_COMP_SHORTER_jm8fjw.webm'"
-          type="video/webm">
-        <source
-          :src="'https://res.cloudinary.com/ejf/video/upload/q_auto:good,f_mp4,w_1280,c_fill,g_center,vc_auto,br_2m/v1742858893/PARALEAKS_COMP_SHORTER_jm8fjw.mp4'"
+          src="https://res.cloudinary.com/ejf/video/upload/q_auto:good,f_mp4,w_1280,c_fill,g_center,vc_auto,br_2m/v1742858893/PARALEAKS_COMP_SHORTER_jm8fjw.mp4"
           type="video/mp4">
-        <source :src="videoUrl.value" type="video/quicktime">
-        <source :src="fallbackVideoUrl.value" type="video/mp4">
       </video>
 
       <!-- Website-like interface overlay introducing the dataset -->
@@ -165,12 +160,7 @@ const scatterplotCanvas = ref(null)
 const shouldBeFixed = ref(false)
 const videoProgress = ref(0)
 
-// Updated Cloudinary URL with optimized parameters
-// Primary video: optimized for performance with lower resolution for faster loading
-const videoUrl = ref('https://res.cloudinary.com/ejf/video/upload/q_auto:eco,f_auto,w_1280,c_fill,g_center,vc_auto/v1742858893/PARALEAKS_COMP_SHORTER_jm8fjw.mov')
-
-// Fallback video with progressive loading and different format options
-const fallbackVideoUrl = ref('https://res.cloudinary.com/ejf/video/upload/q_auto:eco,f_mp4,w_960,c_fill,g_center,vc_auto/v1742858893/PARALEAKS_COMP_SHORTER_jm8fjw.mp4')
+// No complex URL variables needed
 
 // Get visualization methods
 const {
@@ -285,12 +275,8 @@ const handleScroll = () => {
 // Handle video loading errors
 function handleVideoError(e) {
   console.error('Video loading error:', e)
-  // If primary source fails, try the fallback URL directly
-  if (videoPlayer.value && videoPlayer.value.src !== fallbackVideoUrl.value) {
-    console.log('Trying fallback video URL')
-    videoPlayer.value.src = fallbackVideoUrl.value
-    videoPlayer.value.load()
-  }
+  // Simple error handling - just log the error
+  console.log('Video failed to load')
 }
 
 // Initialize video player

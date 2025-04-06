@@ -281,89 +281,35 @@
         <!-- Video Grid -->
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 max-w-7xl mx-auto">
           <!-- Video 1: Exploring the Feed -->
-          <div
-            class="bg-gray-800 rounded-xl overflow-hidden shadow-xl hover:shadow-2xl transition-all duration-300 hover:-translate-y-1 group demo-video-card">
-            <div class="relative aspect-[9/16] overflow-hidden video-container">
-              <div class="absolute inset-0 bg-gradient-to-br from-blue-900 to-gray-900"></div>
-              <video class="w-full h-full object-cover demo-video" muted playsinline loading="lazy" fetchpriority="low"
-                autoplay loop>
+          <div class="bg-gray-800 rounded-xl overflow-hidden shadow-xl mb-8">
+            <div class="p-4">
+              <h3 class="text-2xl font-bold text-white mb-4">Exploring the Feed</h3>
+              <video class="w-full rounded" controls>
                 <source src="https://res.cloudinary.com/ejf/video/upload/v1743947176/001_llc5ag.mp4" type="video/mp4">
+                Your browser does not support the video tag.
               </video>
-              <div
-                class="absolute inset-0 bg-gradient-to-t from-gray-900 via-gray-900/40 to-transparent opacity-80 group-hover:opacity-40 transition-opacity duration-300 video-overlay">
-              </div>
-              <button
-                class="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-blue-500 hover:bg-blue-600 text-white p-4 rounded-full shadow-lg transition-transform duration-300 group-hover:scale-110 video-play-button">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10" viewBox="0 0 20 20" fill="currentColor">
-                  <path fill-rule="evenodd"
-                    d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z"
-                    clip-rule="evenodd" />
-                </svg>
-              </button>
-            </div>
-            <div class="p-6">
-              <h3 class="text-2xl font-bold text-white mb-2 tracking-tight">Exploring the Feed</h3>
-              <p class="text-gray-300 mb-4">See how to navigate through the chronological message feed and filter by
-                date, sender, or keywords.</p>
-              <div class="text-blue-400 text-sm font-medium">0:32</div>
             </div>
           </div>
 
           <!-- Video 2: File Search & Visualization -->
-          <div
-            class="bg-gray-800 rounded-xl overflow-hidden shadow-xl hover:shadow-2xl transition-all duration-300 hover:-translate-y-1 group demo-video-card">
-            <div class="relative aspect-[9/16] overflow-hidden video-container">
-              <div class="absolute inset-0 bg-gradient-to-br from-purple-900 to-gray-900"></div>
-              <video class="w-full h-full object-cover demo-video" muted playsinline loading="lazy" fetchpriority="low"
-                autoplay loop>
+          <div class="bg-gray-800 rounded-xl overflow-hidden shadow-xl mb-8">
+            <div class="p-4">
+              <h3 class="text-2xl font-bold text-white mb-4">File Search & Visualization</h3>
+              <video class="w-full rounded" controls>
                 <source src="https://res.cloudinary.com/ejf/video/upload/v1743947179/002_z7nmhi.mp4" type="video/mp4">
+                Your browser does not support the video tag.
               </video>
-              <div
-                class="absolute inset-0 bg-gradient-to-t from-gray-900 via-gray-900/40 to-transparent opacity-80 group-hover:opacity-40 transition-opacity duration-300 video-overlay">
-              </div>
-              <button
-                class="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-blue-500 hover:bg-blue-600 text-white p-4 rounded-full shadow-lg transition-transform duration-300 group-hover:scale-110 video-play-button">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10" viewBox="0 0 20 20" fill="currentColor">
-                  <path fill-rule="evenodd"
-                    d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z"
-                    clip-rule="evenodd" />
-                </svg>
-              </button>
-            </div>
-            <div class="p-6">
-              <h3 class="text-2xl font-bold text-white mb-2 tracking-tight">File Search & Visualization</h3>
-              <p class="text-gray-300 mb-4">Learn how to search through the file repository and use the interactive
-                visualizations.</p>
-              <div class="text-blue-400 text-sm font-medium">0:28</div>
             </div>
           </div>
 
           <!-- Video 3: Sender Analysis -->
-          <div
-            class="bg-gray-800 rounded-xl overflow-hidden shadow-xl hover:shadow-2xl transition-all duration-300 hover:-translate-y-1 group demo-video-card">
-            <div class="relative aspect-[9/16] overflow-hidden video-container">
-              <div class="absolute inset-0 bg-gradient-to-br from-green-900 to-gray-900"></div>
-              <video class="w-full h-full object-cover demo-video" muted playsinline loading="lazy" fetchpriority="low"
-                autoplay loop>
+          <div class="bg-gray-800 rounded-xl overflow-hidden shadow-xl mb-8">
+            <div class="p-4">
+              <h3 class="text-2xl font-bold text-white mb-4">Sender Analysis</h3>
+              <video class="w-full rounded" controls>
                 <source src="https://res.cloudinary.com/ejf/video/upload/v1743947182/003_wde5pe.mp4" type="video/mp4">
+                Your browser does not support the video tag.
               </video>
-              <div
-                class="absolute inset-0 bg-gradient-to-t from-gray-900 via-gray-900/40 to-transparent opacity-80 group-hover:opacity-40 transition-opacity duration-300 video-overlay">
-              </div>
-              <button
-                class="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-blue-500 hover:bg-blue-600 text-white p-4 rounded-full shadow-lg transition-transform duration-300 group-hover:scale-110 video-play-button">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10" viewBox="0 0 20 20" fill="currentColor">
-                  <path fill-rule="evenodd"
-                    d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z"
-                    clip-rule="evenodd" />
-                </svg>
-              </button>
-            </div>
-            <div class="p-6">
-              <h3 class="text-2xl font-bold text-white mb-2 tracking-tight">Sender Analysis</h3>
-              <p class="text-gray-300 mb-4">Discover patterns in communication by analyzing individual senders and
-                their networks.</p>
-              <div class="text-blue-400 text-sm font-medium">0:46</div>
             </div>
           </div>
         </div>
@@ -1144,174 +1090,10 @@ function handleResize() {
   // Any global resize handling needed
 }
 
-// Function to handle demo video playback
+// Simple function to initialize demo videos
 function initializeDemoVideos() {
-  // Wait for DOM to be fully loaded
-  nextTick(() => {
-    // Collect all demo video elements
-    const videoElements = document.querySelectorAll('.demo-video');
-    const videoContainers = document.querySelectorAll('.video-container');
-
-    // Store references to video elements
-    demoVideos.value = Array.from(videoElements);
-
-    // Force load videos
-    demoVideos.value.forEach((video, index) => {
-      // Ensure video is properly loaded
-      if (video.readyState === 0) {
-        console.log(`Loading video ${index + 1}...`);
-        video.load();
-      }
-    });
-
-    // Add click listeners to all video cards
-    const videoCards = document.querySelectorAll('.demo-video-card');
-    videoCards.forEach((card, index) => {
-      card.addEventListener('click', (event) => {
-        event.preventDefault();
-        handleDemoCardClick(index);
-      });
-    });
-
-    // Track video progress on timeupdate events
-    demoVideos.value.forEach((video, index) => {
-      // Add error handling for videos
-      video.addEventListener('error', (e) => {
-        console.error(`Error loading video ${index + 1}:`, e);
-        // Try to reload the video
-        setTimeout(() => {
-          video.load();
-        }, 1000);
-      });
-
-      video.addEventListener('timeupdate', () => {
-        if (videoContainers[index]) {
-          // Set the progress as a CSS variable
-          const progress = video.currentTime / video.duration;
-          videoContainers[index].style.setProperty('--video-progress', progress);
-        }
-      });
-
-      // Handle video end
-      video.addEventListener('ended', () => {
-        if (videoContainers[index]) {
-          videoContainers[index].classList.remove('playing');
-          const playButton = videoContainers[index].querySelector('.video-play-button');
-          if (playButton) playButton.classList.remove('hidden');
-        }
-      });
-    });
-
-    // Set up a simple intersection observer for streamgraph intro
-    const streamGraphIntroEl = document.getElementById('streamGraphIntro');
-    if (streamGraphIntroEl) {
-      const observer = new IntersectionObserver((entries) => {
-        entries.forEach(entry => {
-          if (entry.isIntersecting) {
-            streamGraphIntroEl.classList.add('opacity-100', 'translate-y-0');
-            observer.unobserve(entry.target);
-          }
-        });
-      }, { threshold: 0.2 });
-
-      observer.observe(streamGraphIntroEl);
-    }
-  });
-}
-
-// Handle demo card click
-function handleDemoCardClick(index) {
-  if (index < 0 || index >= demoVideos.value.length) return;
-
-  const video = demoVideos.value[index];
-  const videoContainers = document.querySelectorAll('.video-container');
-  const videoContainer = videoContainers[index];
-  const playButton = videoContainer.querySelector('.video-play-button');
-
-  // Ensure video is loaded
-  if (video.readyState === 0) {
-    console.log(`Loading video ${index + 1} before playing...`);
-    video.load();
-    // Show loading state
-    videoContainer.classList.add('loading');
-    
-    // Set a timeout to check if video loaded
-    setTimeout(() => {
-      if (video.readyState === 0) {
-        console.log(`Video ${index + 1} still loading, trying to reload...`);
-        // Try reloading with the source directly
-        const source = video.querySelector('source');
-        if (source) {
-          const videoUrl = source.src;
-          video.innerHTML = `<source src="${videoUrl}" type="video/mp4">`;
-          video.load();
-        }
-      }
-      videoContainer.classList.remove('loading');
-    }, 2000);
-    
-    // Wait for video to be ready
-    video.addEventListener('canplay', () => {
-      videoContainer.classList.remove('loading');
-      continuePlayingVideo();
-    }, { once: true });
-    
-    return;
-  }
-
-  continuePlayingVideo();
-  
-  function continuePlayingVideo() {
-    // If video is already playing with sound, pause it
-    if (!video.paused && !video.muted) {
-      video.pause();
-      video.muted = true;
-      video.autoplay = true;
-      video.play(); // Resume playing muted
-      videoContainer.classList.remove('playing');
-      playButton.classList.remove('hidden');
-      return;
-    }
-
-    // Pause any other unmuted videos
-    demoVideos.value.forEach((v, i) => {
-      if (i !== index && !v.paused && !v.muted) {
-        v.pause();
-        v.muted = true;
-        v.autoplay = true;
-        v.play(); // Resume playing muted
-        if (videoContainers[i]) {
-          videoContainers[i].classList.remove('playing');
-          const btn = videoContainers[i].querySelector('.video-play-button');
-          if (btn) btn.classList.remove('hidden');
-        }
-      }
-    });
-
-    // Play the selected video with sound
-    videoContainer.classList.add('playing');
-    playButton.classList.add('hidden');
-    video.muted = false;
-    video.currentTime = 0; // Start from beginning
-
-    video.play()
-      .then(() => {
-        // Try to go fullscreen on mobile
-        if (window.innerWidth <= 768 && videoContainer.requestFullscreen) {
-          videoContainer.requestFullscreen().catch(err => {
-            console.log('Could not enter fullscreen mode:', err);
-          });
-        }
-      })
-      .catch(err => {
-        console.error('Error playing video:', err);
-        // Show error message
-        videoContainer.classList.remove('playing');
-        playButton.classList.remove('hidden');
-        video.muted = true;
-        video.play(); // Fallback to muted autoplay
-      });
-  }
+  console.log('Videos initialized with simple controls');
+  // No complex initialization needed - using native video controls
 }
 
 // New independent variable for scroll progress
@@ -1684,34 +1466,5 @@ html {
   transform: translateZ(0);
 }
 
-/* Loading state for videos */
-.video-container.loading::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(0, 0, 0, 0.5);
-  z-index: 10;
-}
-
-.video-container.loading::after {
-  content: '';
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  width: 40px;
-  height: 40px;
-  margin: -20px 0 0 -20px;
-  border: 4px solid rgba(255, 255, 255, 0.3);
-  border-radius: 50%;
-  border-top-color: #fff;
-  animation: spin 1s ease-in-out infinite;
-  z-index: 11;
-}
-
-@keyframes spin {
-  to { transform: rotate(360deg); }
-}
+/* Removed complex loading animations */
 </style>
