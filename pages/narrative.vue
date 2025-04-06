@@ -284,7 +284,7 @@
           <div class="bg-gray-800 rounded-xl overflow-hidden shadow-xl mb-8">
             <div class="p-4">
               <h3 class="text-2xl font-bold text-white mb-4">Exploring the Feed</h3>
-              <video class="w-full rounded" controls poster="https://res.cloudinary.com/ejf/video/upload/v1743947176/001_llc5ag.png">
+              <video class="w-full rounded" autoplay loop muted playsinline poster="https://res.cloudinary.com/ejf/video/upload/v1743947176/001_llc5ag.png">
                 <source src="https://res.cloudinary.com/ejf/video/upload/v1743947176/001_llc5ag.mp4" type="video/mp4">
                 Your browser does not support the video tag.
               </video>
@@ -295,7 +295,7 @@
           <div class="bg-gray-800 rounded-xl overflow-hidden shadow-xl mb-8">
             <div class="p-4">
               <h3 class="text-2xl font-bold text-white mb-4">File Search & Visualization</h3>
-              <video class="w-full rounded" controls poster="https://res.cloudinary.com/ejf/video/upload/v1743947179/002_z7nmhi.png">
+              <video class="w-full rounded" autoplay loop muted playsinline poster="https://res.cloudinary.com/ejf/video/upload/v1743947179/002_z7nmhi.png">
                 <source src="https://res.cloudinary.com/ejf/video/upload/v1743947179/002_z7nmhi.mp4" type="video/mp4">
                 Your browser does not support the video tag.
               </video>
@@ -306,7 +306,7 @@
           <div class="bg-gray-800 rounded-xl overflow-hidden shadow-xl mb-8">
             <div class="p-4">
               <h3 class="text-2xl font-bold text-white mb-4">Sender Analysis</h3>
-              <video class="w-full rounded" controls poster="https://res.cloudinary.com/ejf/video/upload/v1743947182/003_wde5pe.png">
+              <video class="w-full rounded" autoplay loop muted playsinline poster="https://res.cloudinary.com/ejf/video/upload/v1743947182/003_wde5pe.png">
                 <source src="https://res.cloudinary.com/ejf/video/upload/v1743947182/003_wde5pe.mp4" type="video/mp4">
                 Your browser does not support the video tag.
               </video>
