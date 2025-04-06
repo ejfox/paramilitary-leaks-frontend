@@ -42,12 +42,6 @@
     }" :rawData="rawData" :messagesBySender="messagesBySender" :allSenders="allSenders"
       @update:top-days="handleTopDaysUpdate" :initial-render="statsInitialized" />
 
-    <!-- Transitional buffer section to improve scrolling timing after video ends -->
-    <section class="min-h-[50vh] bg-gradient-to-b from-black/90 to-black relative z-10">
-      <div class="container mx-auto px-4 py-16">
-        <div class="opacity-0 h-5 w-5"><!-- Spacer --></div>
-      </div>
-    </section>
 
     <!-- Source information section with fade-in effect -->
     <section class="bg-black py-40 relative z-10" ref="sourceInfoSection">
@@ -90,8 +84,10 @@
           <div class="border-t border-gray-800 pt-16 mt-8"></div>
           <div class="py-8">
             <p class="text-xl text-gray-400 italic leading-relaxed mb-8">
-              "The militias' private communications reveal how these groups operate
-              and coordinate behind closed doors."
+              It is in the public interest to understand how these organizations think, organize, and behave. The tools
+              we have created are made so that you can better understand your neighbors, first-hand, by reading their
+              unedited communications.
+
             </p>
             <p class="text-lg text-gray-500 italic mt-16">
               Scroll down to explore the timeline of events
@@ -159,81 +155,10 @@
       <div class="relative z-10">
         <StorySection ref="storySection" />
       </div>
-
-      <!-- Visualization integrated directly in the narrative flow -->
-      <div class="container mx-auto py-28">
-        <div class="max-w-4xl mx-auto">
-          <h2 class="text-5xl font-bold mb-10 text-white text-center tracking-tight leading-tight">Communication
-            Patterns Over Time</h2>
-          <p class="text-2xl text-gray-300 max-w-2xl mx-auto mb-16 text-center leading-relaxed">
-            The ebb and flow of messages within paramilitary groups reveals coordination patterns and key moments of
-            heightened activity
-          </p>
-        </div>
-
-        <!-- Main StreamGraph -->
-        <div class="bg-gray-900 p-8 rounded-lg shadow-lg mx-auto mb-16">
-          <h3 class="text-2xl font-bold mb-6 text-white tracking-tight">Overall Communication Activity</h3>
-          <StreamGraph v-if="messagesBySender.length > 0" :messagesBySender="messagesBySender"
-            :topSenders="allSendersExtended" class="w-full" style="min-height: 60vh" :default-layout="'fill'"
-            @highlight-sender="handleSenderHighlight" @clear-highlight="handleClearHighlight" />
-          <div v-else class="h-96 flex items-center justify-center">
-            <div class="text-gray-400 flex flex-col items-center">
-              <svg class="animate-spin mb-4 h-8 w-8 text-blue-500" xmlns="http://www.w3.org/2000/svg" fill="none"
-                viewBox="0 0 24 24">
-                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                <path class="opacity-75" fill="currentColor"
-                  d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z">
-                </path>
-              </svg>
-              <span>Loading data visualization...</span>
-            </div>
-          </div>
-
-          <!-- Note about deleted accounts -->
-          <div class="mt-4 bg-blue-900/30 border border-blue-800/50 text-blue-100 p-3 rounded-md text-sm">
-            <div class="flex items-start">
-              <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2 flex-shrink-0 text-blue-300 mt-0.5"
-                viewBox="0 0 20 20" fill="currentColor">
-                <path fill-rule="evenodd"
-                  d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2h-1V9z"
-                  clip-rule="evenodd" />
-              </svg>
-              <div>
-                <span class="font-medium">Note:</span> "Deleted Account" and "Unknown" each appear as a single user in
-                this visualization, but actually represent multiple different users combined into one stream.
-              </div>
-            </div>
-          </div>
-
-          <div class="mt-8 text-sm text-gray-400 text-center max-w-3xl mx-auto">
-            This visualization shows communication patterns for the top 100 most active members of the paramilitary
-            groups from May 2021 to May 2023, covering the period of highest activity.
-          </div>
-        </div>
-
-        <!-- Explanation and Context -->
-        <div class="bg-gray-900/50 p-8 rounded-lg shadow-lg max-w-2xl mx-auto">
-          <h3 class="text-xl font-semibold mb-6 text-white tracking-tight">Understanding the Visualizations</h3>
-          <div class="text-gray-300 space-y-6 text-base leading-relaxed">
-            <p>
-              These streamgraphs reveal communication patterns over time, with the thickness indicating message
-              volume.
-              Visible spikes often indicate planning coordination, events, or responses to external triggers.
-            </p>
-            <p>
-              The most active communicators often coordinated militia activities, recruitment, and training.
-              Notice how communication ebbs and flows, with periods of heightened activity around significant
-              political
-              events.
-            </p>
-          </div>
-        </div>
-      </div>
     </section>
 
     <!-- Articles section -->
-    <section class="bg-gray-950 py-28 relative z-10">
+    <section class="bg-gray-950  py-2 relative z-10">
       <div class="container mx-auto px-4">
         <div class="max-w-3xl mx-auto mb-20">
           <h2 class="text-5xl font-bold mb-16 text-white text-center tracking-tight leading-tight">Further Reading
@@ -287,8 +212,7 @@
         <div class="mb-24 max-w-7xl mx-auto">
           <h3 class="text-3xl font-bold mb-12 text-blue-400 tracking-tight">ProPublica Investigations</h3>
           <div class="grid grid-cols-1 md:grid-cols-2 gap-10">
-            <a href="https://www.propublica.org/article/john-williams-infiltrated-militia-movement-american-patriots-three-percent"
-              target="_blank" rel="noopener"
+            <a href="https://www.propublica.org/article/ap3-oath-keepers-militia-mole" target="_blank" rel="noopener"
               class="bg-gray-900 rounded-lg overflow-hidden shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-1">
               <div class="p-8">
                 <h4 class="text-2xl font-bold text-white mb-4 tracking-tight">The Militia and the Mole</h4>
@@ -345,7 +269,7 @@
     </section>
 
     <!-- Demo Videos section -->
-    <section ref="demoSectionRef" class="bg-gray-900 py-28 relative z-10">
+    <section ref="demoSectionRef" class="bg-gray-900 mt-10 lg:mt-24 py-28 relative z-10">
       <div class="container mx-auto px-4">
         <div class="max-w-3xl mx-auto mb-16">
           <h2 class="text-5xl font-bold mb-8 text-white text-center tracking-tight leading-tight">How To Use</h2>
@@ -361,15 +285,9 @@
             class="bg-gray-800 rounded-xl overflow-hidden shadow-xl hover:shadow-2xl transition-all duration-300 hover:-translate-y-1 group demo-video-card">
             <div class="relative aspect-[9/16] overflow-hidden video-container">
               <div class="absolute inset-0 bg-gradient-to-br from-blue-900 to-gray-900"></div>
-              <!-- Placeholder for video - will be replaced with actual video later -->
               <video class="w-full h-full object-cover demo-video" muted playsinline loading="lazy" fetchpriority="low"
-                poster="https://res.cloudinary.com/ejf/video/upload/q_auto,w_640,e_blur:300,f_jpg/v1/demos/exploring-feed.jpg">
-                <source
-                  src="https://res.cloudinary.com/ejf/video/upload/q_auto:good,f_webm,w_640/v1/demos/exploring-feed.webm"
-                  type="video/webm">
-                <source
-                  src="https://res.cloudinary.com/ejf/video/upload/q_auto:good,f_mp4,w_640/v1/demos/exploring-feed.mp4"
-                  type="video/mp4">
+                autoplay loop>
+                <source src="https://res.cloudinary.com/ejf/video/upload/v1743947176/001_llc5ag.mp4" type="video/mp4">
               </video>
               <div
                 class="absolute inset-0 bg-gradient-to-t from-gray-900 via-gray-900/40 to-transparent opacity-80 group-hover:opacity-40 transition-opacity duration-300 video-overlay">
@@ -387,7 +305,7 @@
               <h3 class="text-2xl font-bold text-white mb-2 tracking-tight">Exploring the Feed</h3>
               <p class="text-gray-300 mb-4">See how to navigate through the chronological message feed and filter by
                 date, sender, or keywords.</p>
-              <div class="text-blue-400 text-sm font-medium">1:32</div>
+              <div class="text-blue-400 text-sm font-medium">0:32</div>
             </div>
           </div>
 
@@ -396,15 +314,9 @@
             class="bg-gray-800 rounded-xl overflow-hidden shadow-xl hover:shadow-2xl transition-all duration-300 hover:-translate-y-1 group demo-video-card">
             <div class="relative aspect-[9/16] overflow-hidden video-container">
               <div class="absolute inset-0 bg-gradient-to-br from-purple-900 to-gray-900"></div>
-              <!-- Placeholder for video - will be replaced with actual video later -->
               <video class="w-full h-full object-cover demo-video" muted playsinline loading="lazy" fetchpriority="low"
-                poster="https://res.cloudinary.com/ejf/video/upload/q_auto,w_640,e_blur:300,f_jpg/v1/demos/file-search.jpg">
-                <source
-                  src="https://res.cloudinary.com/ejf/video/upload/q_auto:good,f_webm,w_640/v1/demos/file-search.webm"
-                  type="video/webm">
-                <source
-                  src="https://res.cloudinary.com/ejf/video/upload/q_auto:good,f_mp4,w_640/v1/demos/file-search.mp4"
-                  type="video/mp4">
+                autoplay loop>
+                <source src="https://res.cloudinary.com/ejf/video/upload/v1743947179/002_z7nmhi.mp4" type="video/mp4">
               </video>
               <div
                 class="absolute inset-0 bg-gradient-to-t from-gray-900 via-gray-900/40 to-transparent opacity-80 group-hover:opacity-40 transition-opacity duration-300 video-overlay">
@@ -422,7 +334,7 @@
               <h3 class="text-2xl font-bold text-white mb-2 tracking-tight">File Search & Visualization</h3>
               <p class="text-gray-300 mb-4">Learn how to search through the file repository and use the interactive
                 visualizations.</p>
-              <div class="text-blue-400 text-sm font-medium">2:14</div>
+              <div class="text-blue-400 text-sm font-medium">0:28</div>
             </div>
           </div>
 
@@ -431,15 +343,9 @@
             class="bg-gray-800 rounded-xl overflow-hidden shadow-xl hover:shadow-2xl transition-all duration-300 hover:-translate-y-1 group demo-video-card">
             <div class="relative aspect-[9/16] overflow-hidden video-container">
               <div class="absolute inset-0 bg-gradient-to-br from-green-900 to-gray-900"></div>
-              <!-- Placeholder for video - will be replaced with actual video later -->
               <video class="w-full h-full object-cover demo-video" muted playsinline loading="lazy" fetchpriority="low"
-                poster="https://res.cloudinary.com/ejf/video/upload/q_auto,w_640,e_blur:300,f_jpg/v1/demos/sender-analysis.jpg">
-                <source
-                  src="https://res.cloudinary.com/ejf/video/upload/q_auto:good,f_webm,w_640/v1/demos/sender-analysis.webm"
-                  type="video/webm">
-                <source
-                  src="https://res.cloudinary.com/ejf/video/upload/q_auto:good,f_mp4,w_640/v1/demos/sender-analysis.mp4"
-                  type="video/mp4">
+                autoplay loop>
+                <source src="https://res.cloudinary.com/ejf/video/upload/v1743947182/003_wde5pe.mp4" type="video/mp4">
               </video>
               <div
                 class="absolute inset-0 bg-gradient-to-t from-gray-900 via-gray-900/40 to-transparent opacity-80 group-hover:opacity-40 transition-opacity duration-300 video-overlay">
@@ -456,109 +362,8 @@
             <div class="p-6">
               <h3 class="text-2xl font-bold text-white mb-2 tracking-tight">Sender Analysis</h3>
               <p class="text-gray-300 mb-4">Discover patterns in communication by analyzing individual senders and
-                their
-                networks.</p>
-              <div class="text-blue-400 text-sm font-medium">1:48</div>
-            </div>
-          </div>
-
-          <!-- Video 4: Network Graph -->
-          <div
-            class="bg-gray-800 rounded-xl overflow-hidden shadow-xl hover:shadow-2xl transition-all duration-300 hover:-translate-y-1 group demo-video-card">
-            <div class="relative aspect-[9/16] overflow-hidden video-container">
-              <div class="absolute inset-0 bg-gradient-to-br from-red-900 to-gray-900"></div>
-              <!-- Placeholder for video - will be replaced with actual video later -->
-              <video class="w-full h-full object-cover demo-video" muted playsinline loading="lazy" fetchpriority="low"
-                poster="https://res.cloudinary.com/ejf/video/upload/q_auto,w_640,e_blur:300,f_jpg/v1/demos/network-graph.jpg">
-                <source
-                  src="https://res.cloudinary.com/ejf/video/upload/q_auto:good,f_webm,w_640/v1/demos/network-graph.webm"
-                  type="video/webm">
-                <source
-                  src="https://res.cloudinary.com/ejf/video/upload/q_auto:good,f_mp4,w_640/v1/demos/network-graph.mp4"
-                  type="video/mp4">
-              </video>
-              <div
-                class="absolute inset-0 bg-gradient-to-t from-gray-900 via-gray-900/40 to-transparent opacity-80 group-hover:opacity-40 transition-opacity duration-300 video-overlay">
-              </div>
-              <button
-                class="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-blue-500 hover:bg-blue-600 text-white p-4 rounded-full shadow-lg transition-transform duration-300 group-hover:scale-110 video-play-button">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10" viewBox="0 0 20 20" fill="currentColor">
-                  <path fill-rule="evenodd"
-                    d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z"
-                    clip-rule="evenodd" />
-                </svg>
-              </button>
-            </div>
-            <div class="p-6">
-              <h3 class="text-2xl font-bold text-white mb-2 tracking-tight">Network Graph</h3>
-              <p class="text-gray-300 mb-4">Explore connections between different militia members using the
-                interactive
-                network visualization.</p>
-              <div class="text-blue-400 text-sm font-medium">2:05</div>
-            </div>
-          </div>
-
-          <!-- Video 5: Advanced Search Techniques -->
-          <div
-            class="bg-gray-800 rounded-xl overflow-hidden shadow-xl hover:shadow-2xl transition-all duration-300 hover:-translate-y-1 group demo-video-card">
-            <div class="relative aspect-[9/16] overflow-hidden video-container">
-              <div class="absolute inset-0 bg-gradient-to-br from-yellow-800 to-gray-900"></div>
-              <!-- Placeholder for video - will be replaced with actual video later -->
-              <video class="w-full h-full object-cover demo-video" muted playsinline>
-                <source src="#" type="video/mp4">
-                <source
-                  src="https://res.cloudinary.com/ejf/video/upload/q_auto:good,f_webm,w_640/v1/demos/advanced-search.webm"
-                  type="video/webm">
-                <source
-                  src="https://res.cloudinary.com/ejf/video/upload/q_auto:good,f_mp4,w_640/v1/demos/advanced-search.mp4"
-                  type="video/mp4">
-              </video>
-              <div
-                class="absolute inset-0 bg-gradient-to-t from-gray-900 via-gray-900/40 to-transparent opacity-80 group-hover:opacity-40 transition-opacity duration-300 video-overlay">
-              </div>
-              <button
-                class="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-blue-500 hover:bg-blue-600 text-white p-4 rounded-full shadow-lg transition-transform duration-300 group-hover:scale-110 video-play-button">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10" viewBox="0 0 20 20" fill="currentColor">
-                  <path fill-rule="evenodd"
-                    d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z"
-                    clip-rule="evenodd" />
-                </svg>
-              </button>
-            </div>
-            <div class="p-6">
-              <h3 class="text-2xl font-bold text-white mb-2 tracking-tight">Advanced Search Techniques</h3>
-              <p class="text-gray-300 mb-4">Master advanced search queries to find specific content across the entire
-                dataset.</p>
-              <div class="text-blue-400 text-sm font-medium">1:56</div>
-            </div>
-          </div>
-
-          <!-- Video 6: Timeline Analysis -->
-          <div
-            class="bg-gray-800 rounded-xl overflow-hidden shadow-xl hover:shadow-2xl transition-all duration-300 hover:-translate-y-1 group demo-video-card">
-            <div class="relative aspect-[9/16] overflow-hidden video-container">
-              <div class="absolute inset-0 bg-gradient-to-br from-indigo-900 to-gray-900"></div>
-              <!-- Placeholder for video - will be replaced with actual video later -->
-              <video class="w-full h-full object-cover demo-video" muted playsinline>
-                <source src="#" type="video/mp4">
-              </video>
-              <div
-                class="absolute inset-0 bg-gradient-to-t from-gray-900 via-gray-900/40 to-transparent opacity-80 group-hover:opacity-40 transition-opacity duration-300 video-overlay">
-              </div>
-              <button
-                class="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-blue-500 hover:bg-blue-600 text-white p-4 rounded-full shadow-lg transition-transform duration-300 group-hover:scale-110 video-play-button">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10" viewBox="0 0 20 20" fill="currentColor">
-                  <path fill-rule="evenodd"
-                    d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z"
-                    clip-rule="evenodd" />
-                </svg>
-              </button>
-            </div>
-            <div class="p-6">
-              <h3 class="text-2xl font-bold text-white mb-2 tracking-tight">Timeline Analysis</h3>
-              <p class="text-gray-300 mb-4">Track how events unfolded over time and identify significant communication
-                patterns.</p>
-              <div class="text-blue-400 text-sm font-medium">2:22</div>
+                their networks.</p>
+              <div class="text-blue-400 text-sm font-medium">0:46</div>
             </div>
           </div>
         </div>
@@ -1046,7 +851,7 @@ function formatNumber(value) {
 // Store variables needed for top message days component
 const topMessageDays = ref([])
 
-// Helper function to shuffle array for better visualization 
+// Helper function to shuffle array for better visualization
 function shuffleArray(array) {
   // Only shuffle a copy of the array to avoid mutating the original
   const shuffled = [...array]
@@ -1405,75 +1210,24 @@ function handleDemoCardClick(index) {
   const videoContainer = videoContainers[index];
   const playButton = videoContainer.querySelector('.video-play-button');
 
-  // Since we don't have actual videos yet, just show a placeholder animation
-  if (video.src === '' || video.src.endsWith('#')) {
-    // If no real video, toggle a simulated playing state
-    if (videoContainer.classList.contains('playing')) {
-      // "Stop" the simulated video
-      videoContainer.classList.remove('playing');
-      playButton.classList.remove('hidden');
-
-      // Reset the progress bar
-      videoContainer.style.setProperty('--video-progress', 0);
-    } else {
-      // Pause any other "playing" videos
-      document.querySelectorAll('.video-container.playing').forEach(container => {
-        container.classList.remove('playing');
-        const btn = container.querySelector('.video-play-button');
-        if (btn) btn.classList.remove('hidden');
-      });
-
-      // "Play" the simulated video
-      videoContainer.classList.add('playing');
-      playButton.classList.add('hidden');
-
-      // Animate the progress bar over 5 seconds
-      let progress = 0;
-      const duration = 5000; // 5 seconds for demo
-      const interval = 50; // Update every 50ms
-      const increment = interval / duration;
-
-      const progressInterval = setInterval(() => {
-        progress += increment;
-        videoContainer.style.setProperty('--video-progress', progress);
-
-        if (progress >= 1) {
-          clearInterval(progressInterval);
-          // "End" the simulated video
-          setTimeout(() => {
-            videoContainer.classList.remove('playing');
-            playButton.classList.remove('hidden');
-          }, 300);
-        }
-      }, interval);
-
-      // Show a message that this is just a placeholder
-      const notification = document.createElement('div');
-      notification.className = 'fixed top-4 left-1/2 transform -translate-x-1/2 bg-blue-600 text-white px-4 py-3 rounded-lg shadow-lg z-50';
-      notification.innerHTML = 'Demo videos coming soon! This is just a placeholder animation.';
-      document.body.appendChild(notification);
-
-      setTimeout(() => {
-        notification.style.opacity = '0';
-        notification.style.transition = 'opacity 0.5s ease';
-        setTimeout(() => notification.remove(), 500);
-      }, 3000);
-    }
-    return;
-  }
-
-  // If video is already playing, pause it
-  if (!video.paused) {
+  // If video is already playing with sound, pause it
+  if (!video.paused && !video.muted) {
     video.pause();
+    video.muted = true;
+    video.autoplay = true;
+    video.play(); // Resume playing muted
     videoContainer.classList.remove('playing');
     playButton.classList.remove('hidden');
     return;
   }
 
-  // Pause any other playing videos
+  // Pause any other unmuted videos
   demoVideos.value.forEach((v, i) => {
-    if (i !== index && !v.paused) {
+    if (i !== index && !v.paused && !v.muted) {
       v.pause();
+      v.muted = true;
+      v.autoplay = true;
+      v.play(); // Resume playing muted
       if (videoContainers[i]) {
         videoContainers[i].classList.remove('playing');
         const btn = videoContainers[i].querySelector('.video-play-button');
@@ -1482,9 +1236,11 @@ function handleDemoCardClick(index) {
     }
   });
 
-  // Play the selected video
+  // Play the selected video with sound
   videoContainer.classList.add('playing');
   playButton.classList.add('hidden');
+  video.muted = false;
+  video.currentTime = 0; // Start from beginning
 
   video.play()
     .then(() => {
@@ -1497,20 +1253,11 @@ function handleDemoCardClick(index) {
     })
     .catch(err => {
       console.error('Error playing video:', err);
-      // Show a message to the user
+      // Show error message
       videoContainer.classList.remove('playing');
       playButton.classList.remove('hidden');
-
-      const notification = document.createElement('div');
-      notification.className = 'fixed top-4 left-1/2 transform -translate-x-1/2 bg-red-600 text-white px-4 py-3 rounded-lg shadow-lg z-50';
-      notification.innerHTML = 'Could not play video. Please try again by tapping directly on the play button.';
-      document.body.appendChild(notification);
-
-      setTimeout(() => {
-        notification.style.opacity = '0';
-        notification.style.transition = 'opacity 0.5s ease';
-        setTimeout(() => notification.remove(), 500);
-      }, 3000);
+      video.muted = true;
+      video.play(); // Fallback to muted autoplay
     });
 }
 
